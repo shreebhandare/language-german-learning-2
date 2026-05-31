@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { LEVELS, CATEGORIES, Level, Category, AccessFlag, ExerciseType } from '@/lib/langrushi-data';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { LEVELS, Level } from '@/lib/langrushi-data';
 import { toast } from '@/components/ui/use-toast';
-import { Plus, Trash2, Download, Upload, Settings, Users, Tag, KeyRound, BookOpen, FileText } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
+import CollapsibleCard from './CollapsibleCard';
 
 const ClassCodesAdmin: React.FC = () => {
   const { classCodes, addClassCode, updateClassCodeLocal, removeClassCode } = useAppContext();
@@ -14,37 +12,114 @@ const ClassCodesAdmin: React.FC = () => {
   const [maxUses, setMaxUses] = useState(50);
 
   const add = async () => {
-    if (!code) return;
-    await addClassCode({ id: 'cc' + Date.now(), code, level, maxUses, used: 0, active: true });
+    if (!code.trim()) { toast({ title: 'Code is required' }); return; }
+    await addClassCode({ id: 'cc' + Date.now(), code: code.trim(), level, maxUses, used: 0, active: true });
     setCode('');
-    toast({ title: 'Class code saved to database' });
+    toast({ title: 'Class code saved' });
   };
 
   return (
     <div>
-      <h2 className="font-bold text-xl mb-4">Class Codes</h2>
-      <div className="bg-white border rounded-xl p-4 mb-4 flex flex-wrap gap-2 items-end">
-        <div className="flex-1 min-w-[150px]"><Label>Code</Label><Input value={code} onChange={e => setCode(e.target.value)} placeholder="GERMAN-X-2025" /></div>
-        <div><Label>Level</Label><select className="border rounded p-2" value={level} onChange={e => setLevel(e.target.value as Level)}>{LEVELS.map(l => <option key={l}>{l}</option>)}</select></div>
-        <div><Label>Max uses</Label><Input type="number" value={maxUses} onChange={e => setMaxUses(+e.target.value)} className="w-24" /></div>
-        <Button onClick={add} className="bg-[#0a192f]"><Plus className="w-4 h-4 mr-1" /> Add</Button>
+      <div style={{ marginBottom: '20px' }}>
+        <div className="section-label">Access Management</div>
+        <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)' }}>Class Codes</h2>
       </div>
-      <div className="bg-white border rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left"><tr><th className="p-3">Code</th><th className="p-3">Level</th><th className="p-3">Used</th><th className="p-3">Active</th><th className="p-3"></th></tr></thead>
-          <tbody>
-            {classCodes.map(c => (
-              <tr key={c.id} className="border-t border-slate-100">
-                <td className="p-3 font-mono">{c.code}</td>
-                <td className="p-3">{c.level}</td>
-                <td className="p-3">{c.used}/{c.maxUses}</td>
-                <td className="p-3"><button onClick={() => updateClassCodeLocal(c.id, { active: !c.active })} className={`px-2 py-0.5 text-xs rounded ${c.active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-black'}`}>{c.active ? 'Active' : 'Inactive'}</button></td>
-                <td className="p-3 text-right"><Button size="sm" variant="ghost" onClick={() => removeClassCode(c.id)}><Trash2 className="w-4 h-4 text-red-500" /></Button></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+
+      {/* Add form */}
+      <CollapsibleCard label="Add New Code">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'flex-end' }}>
+          <div style={{ flex: '1 1 180px' }}>
+            <label style={{ display: 'block', fontFamily: 'Figtree, sans-serif', fontWeight: 600, fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '5px' }}>Code</label>
+            <input className="input" value={code} onChange={e => setCode(e.target.value)} placeholder="GERMAN-B1-2026" onKeyDown={e => e.key === 'Enter' && add()} />
+          </div>
+          <div style={{ minWidth: '110px' }}>
+            <label style={{ display: 'block', fontFamily: 'Figtree, sans-serif', fontWeight: 600, fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '5px' }}>Level</label>
+            <select className="select" value={level} onChange={e => setLevel(e.target.value as Level)}>
+              {LEVELS.map(l => <option key={l}>{l}</option>)}
+            </select>
+          </div>
+          <div style={{ minWidth: '110px' }}>
+            <label style={{ display: 'block', fontFamily: 'Figtree, sans-serif', fontWeight: 600, fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '5px' }}>Max uses</label>
+            <input className="input" type="number" value={maxUses} onChange={e => setMaxUses(+e.target.value)} style={{ width: '100px' }} />
+          </div>
+          <button className="btn-primary" onClick={add} style={{ gap: '6px' }}>
+            <Plus className="w-4 h-4" /> Add Code
+          </button>
+        </div>
+      </CollapsibleCard>
+
+      {/* Table */}
+      <CollapsibleCard
+        label="All Class Codes"
+        badge={
+          classCodes.length > 0 && (
+            <span style={{ background: 'var(--accent)', color: '#fff', borderRadius: '999px', fontSize: '10px', fontWeight: 700, padding: '1px 8px', lineHeight: '18px' }}>
+              {classCodes.length}
+            </span>
+          )
+        }
+        style={{ marginBottom: 0 }}
+      >
+        {classCodes.length === 0 ? (
+          <div className="empty-state">
+            <p style={{ fontFamily: 'Figtree, sans-serif', fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)', margin: '0 0 4px' }}>No class codes yet</p>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>Add one above to get started.</p>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto', margin: '-20px' }}>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Level</th>
+                  <th>Usage</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {classCodes.map(c => (
+                  <tr key={c.id}>
+                    <td style={{ fontFamily: 'IBM Plex Mono, monospace', fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px' }}>{c.code}</td>
+                    <td><span className="badge badge-blue">{c.level}</span></td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ flex: 1, maxWidth: '100px' }}>
+                          <div className="progress-track" style={{ marginBottom: '3px' }}>
+                            <div className="progress-fill" style={{ width: `${Math.min(100, (c.used / c.maxUses) * 100)}%` }} />
+                          </div>
+                        </div>
+                        <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '11px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{c.used}/{c.maxUses}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <button
+                        onClick={() => updateClassCodeLocal(c.id, { active: !c.active })}
+                        className={c.active ? 'badge badge-green' : 'badge badge-slate'}
+                        style={{ cursor: 'pointer', border: 'none', fontFamily: 'IBM Plex Mono, monospace', transition: 'all 180ms ease' }}
+                      >
+                        {c.active ? '● Active' : '○ Inactive'}
+                      </button>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button
+                        onClick={() => removeClassCode(c.id)}
+                        title="Delete code"
+                        aria-label="Delete code"
+                        style={{ padding: '6px 8px', background: 'var(--danger-bg)', border: '1px solid rgba(220,38,38,0.15)', borderRadius: '6px', color: 'var(--danger)', cursor: 'pointer', transition: 'background 180ms ease' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(220,38,38,0.14)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'var(--danger-bg)')}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CollapsibleCard>
     </div>
   );
 };

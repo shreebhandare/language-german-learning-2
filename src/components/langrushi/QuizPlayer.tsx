@@ -24,6 +24,7 @@ const QuizPlayer: React.FC<Props> = ({ exercise, onClose }) => {
   const [startTime] = useState(Date.now());
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [finishConfirmText, setFinishConfirmText] = useState('');
+  const [showTranscript, setShowTranscript] = useState(false);
   
   if (exercise.type === 'Passive') return <PassiveExercise exercise={exercise} onClose={onClose} isCourseMatch={user?.tier === 'course' && user.courseLevel === exercise.level} />;
 
@@ -80,13 +81,19 @@ const QuizPlayer: React.FC<Props> = ({ exercise, onClose }) => {
 
   const handleSkip = () => {
     setAnswers(prev => ({ ...prev, [q.id]: '' })); // Clear any partial answer
-    setScores(prev => ({ ...prev, [q.id]: false })); // Mark as incorrect permanently
-    setQueue(prev => [...prev, qIdx]); // Push question to the end of the queue
+    const newScores = { ...scores, [q.id]: false };
+    setScores(newScores); // Mark as incorrect permanently
     
-    // Instantly move to next without showing answer
-    setQueueIdx(prev => prev + 1);
-    setSubmitted(false);
-    setShowHint(false);
+    const nextIdx = queueIdx + 1;
+    if (nextIdx >= queue.length) {
+      const correctCount = Object.values(newScores).filter(Boolean).length;
+      recordAttempt(exercise.id, correctCount, totalUnique);
+      setShowResults(true);
+    } else {
+      setQueueIdx(nextIdx);
+      setSubmitted(false);
+      setShowHint(false);
+    }
   };
 
   const forceSubmit = () => {
@@ -237,12 +244,45 @@ const QuizPlayer: React.FC<Props> = ({ exercise, onClose }) => {
       {/* Main content */}
       <div className="flex-1 flex flex-col items-center px-4 py-8 pb-32">
         <div className="w-full max-w-2xl">
-          {exercise.mediaUrl && qIdx === 0 && (
+          {exercise.mediaUrl && (
             <div className="mb-8 bg-gradient-to-br from-blue-50 to-orange-50 rounded-xl p-4 border border-blue-100">
-              <div className="flex items-center gap-2 text-sm font-medium text-black mb-2">
-                <Headphones className="w-4 h-4 text-red-600" /> Listen to the audio for context
+              <div className="flex items-center justify-between text-sm font-medium text-black mb-2">
+                <div className="flex items-center gap-2">
+                  <Headphones className="w-4 h-4 text-red-600" /> Listen to the audio for context
+                </div>
+                {exercise.transcript && (
+                  <button
+                    onClick={() => setShowTranscript(prev => !prev)}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-white/80 hover:bg-white border border-blue-200 rounded-lg px-3 py-1.5 transition-all"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    {showTranscript ? 'Hide Transcript' : 'Show Transcript'}
+                  </button>
+                )}
               </div>
               <audio controls className="w-full" src={exercise.mediaUrl} />
+            </div>
+          )}
+
+          {/* Transcript Sidebar */}
+          {exercise.transcript && (
+            <div
+              className={`fixed top-0 right-0 h-full w-[340px] z-50 bg-white/95 backdrop-blur-xl border-l border-slate-200 shadow-2xl transform transition-transform duration-300 ease-in-out ${showTranscript ? 'translate-x-0' : 'translate-x-full'}`}
+            >
+              <div className="flex items-center justify-between p-4 border-b border-slate-100">
+                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-blue-600" /> Transcript
+                </h3>
+                <button
+                  onClick={() => setShowTranscript(false)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500 hover:text-slate-800"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="p-5 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 64px)' }}>
+                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{exercise.transcript}</p>
+              </div>
             </div>
           )}
 

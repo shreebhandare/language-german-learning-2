@@ -22,6 +22,7 @@ export async function fetchExercises(): Promise<Exercise[]> {
     type: r.type,
     access: r.access,
     mediaUrl: r.media_url || undefined,
+    transcript: r.transcript || undefined,
     questions: r.questions || undefined,
     answerDisplayMode: r.answer_display_mode || 'instant',
     allowSkip: r.allow_skip !== false,
@@ -35,7 +36,8 @@ export async function insertExercise(ex: Exercise): Promise<void> {
   await supabase.from('langrushi_exercises').insert({
     id: ex.id, title: ex.title, level: ex.level, category: ex.category,
     sub_part: ex.subPart, type: ex.type, access: ex.access,
-    media_url: ex.mediaUrl || null, questions: ex.questions || null,
+    media_url: ex.mediaUrl || null, transcript: ex.transcript || null,
+    questions: ex.questions || null,
     answer_display_mode: ex.answerDisplayMode || 'instant',
     allow_skip: ex.allowSkip !== false,
     prompt: ex.prompt || null, guidance: ex.guidance || null, model_answer: ex.modelAnswer || null,
@@ -51,6 +53,7 @@ export async function updateExercise(id: string, ex: Partial<Exercise>): Promise
   if (ex.type !== undefined) patch.type = ex.type;
   if (ex.access !== undefined) patch.access = ex.access;
   if (ex.mediaUrl !== undefined) patch.media_url = ex.mediaUrl || null;
+  if (ex.transcript !== undefined) patch.transcript = ex.transcript || null;
   if (ex.questions !== undefined) patch.questions = ex.questions || null;
   if (ex.answerDisplayMode !== undefined) patch.answer_display_mode = ex.answerDisplayMode;
   if (ex.allowSkip !== undefined) patch.allow_skip = ex.allowSkip;

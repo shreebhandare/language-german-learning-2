@@ -25,6 +25,7 @@ export interface Exercise {
   access: AccessFlag;
   // Interactive
   mediaUrl?: string;
+  transcript?: string;
   questions?: Question[];
   answerDisplayMode?: 'instant' | 'end' | 'none';
   allowSkip?: boolean;
@@ -65,6 +66,7 @@ export const initialExercises: Exercise[] = [
   {
     id: 'e1', title: 'Am Bahnhof', level: 'A1', category: 'Listening', subPart: 'Teil 1',
     type: 'Interactive', access: 'FREE_ALL', mediaUrl: sampleAudio,
+    transcript: 'Ansage: Achtung, bitte! Der Zug nach Berlin fährt um 14 Uhr ab, Gleis 3.\n\nFrau: Entschuldigung, wo kann ich ein Ticket kaufen?\nMann: Am Schalter dort drüben, links neben dem Ausgang.\nFrau: Danke schön! Und wissen Sie, ob der Zug pünktlich ist?\nMann: Ja, normalerweise ist er pünktlich. Sie haben noch 20 Minuten.\nFrau: Wunderbar, vielen Dank!',
     questions: [
       { id: 'q1', text: 'Wo befindet sich die Person?', type: 'MCQ', options: ['Im Park', 'Am Bahnhof', 'Im Café', 'Zu Hause'], correctAnswer: 'Am Bahnhof', hint: 'Listen for transport sounds', explanation: 'The audio mentions train arrivals.' },
       { id: 'q2', text: 'Der Zug fährt um _____ Uhr ab.', type: 'FILL_BLANK', correctAnswer: '14', hint: 'A number between 12 and 16' },

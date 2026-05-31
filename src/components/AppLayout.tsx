@@ -13,16 +13,12 @@ import { CoursesPage, PricingPage, AboutPage, ContactPage } from './langrushi/Si
 
 const AppLayout: React.FC = () => {
   const { view, loading, activeExerciseId } = useAppContext();
-
   const isQuizMode = view === 'learn' && !!activeExerciseId;
 
-  // postMessage height sync for embed mode
   useEffect(() => {
     const isEmbed = new URLSearchParams(window.location.search).get('embed') === 'true';
     if (!isEmbed) return;
-    const sendHeight = () => {
-      window.parent.postMessage({ type: 'langrushi-height', height: document.body.scrollHeight }, '*');
-    };
+    const sendHeight = () => window.parent.postMessage({ type: 'langrushi-height', height: document.body.scrollHeight }, '*');
     sendHeight();
     const ro = new ResizeObserver(sendHeight);
     ro.observe(document.body);
@@ -32,35 +28,42 @@ const AppLayout: React.FC = () => {
   const renderView = () => {
     switch (view) {
       case 'marketing': return <MarketingPage />;
-      case 'learn': return <LearnPage />;
+      case 'learn':     return <LearnPage />;
       case 'dashboard': return <Dashboard />;
-      case 'admin': return <AdminPanel />;
-      case 'courses': return <CoursesPage />;
-      case 'pricing': return <PricingPage />;
-      case 'about': return <AboutPage />;
-      case 'contact': return <ContactPage />;
-      default: return <MarketingPage />;
+      case 'admin':     return <AdminPanel />;
+      case 'courses':   return <CoursesPage />;
+      case 'pricing':   return <PricingPage />;
+      case 'about':     return <AboutPage />;
+      case 'contact':   return <ContactPage />;
+      default:          return <MarketingPage />;
     }
   };
 
+  const showHeaderFooter = !isQuizMode && view !== 'admin';
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center flex flex-col items-center">
-          <img src="/loader.gif" alt="Loading..." className="w-16 h-16 mx-auto mb-3 object-contain" />
-          <div className="text-white text-sm font-medium">Loading Langrushi...</div>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg-base)' }}>
+        <div className="flex flex-col items-center gap-5">
+          {/* Skeleton-style loading */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', width: '200px' }}>
+            <div className="skeleton" style={{ width: '56px', height: '56px', borderRadius: '14px' }} />
+            <div className="skeleton" style={{ width: '140px', height: '14px' }} />
+            <div className="skeleton" style={{ width: '100px', height: '11px' }} />
+          </div>
+          <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            Loading Langrushi...
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      {!isQuizMode && <Header />}
-      <main className="flex-1">
-        {renderView()}
-      </main>
-      {!isQuizMode && <Footer />}
+    <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg-base)' }}>
+      {showHeaderFooter && <Header />}
+      <main className="flex-1">{renderView()}</main>
+      {showHeaderFooter && <Footer />}
       <AuthModal />
       <ForcedUpgradeModal />
       <CookieBanner />

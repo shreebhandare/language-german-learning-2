@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { toast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { Mail, Linkedin, Instagram, Facebook, Youtube } from 'lucide-react';
 
 const Footer: React.FC = () => {
   const { setView } = useAppContext();
+  const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -13,100 +14,113 @@ const Footer: React.FC = () => {
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !email.includes('@')) {
-      toast({ title: 'Please enter a valid email' });
-      return;
-    }
+    if (!email || !email.includes('@')) { toast({ title: 'Please enter a valid email' }); return; }
     setLoading(true);
     try {
       await fetch('https://famous.ai/api/crm/69f7abee58024ee320e024b5/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, source: 'footer-signup', tags: ['newsletter', 'langrushi'] }),
       });
       toast({ title: 'Subscribed!', description: 'Thanks for joining our newsletter.' });
       setEmail('');
-    } catch {
-      toast({ title: 'Subscription failed' });
-    }
+    } catch { toast({ title: 'Subscription failed' }); }
     setLoading(false);
   };
 
-  return (
-    <footer className="bg-slate-900 text-slate-300 mt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
-          <div className="col-span-2">
-            <div className="flex items-center gap-2 mb-4">
+  const linkStyle: React.CSSProperties = {
+    display: 'inline-block', fontFamily: 'Figtree, sans-serif', fontSize: '13px',
+    color: '#94A3B8', background: 'none', border: 'none', cursor: 'pointer',
+    padding: '2px 0', transition: 'color 180ms ease', textDecoration: 'none',
+  };
 
-              <img src="https://cdn.designfast.io/image/2026-05-04/f1839146-da23-4922-a38b-c05ffeb53214.png" alt="logo-light" className='w-48 mb-4' />
-            </div>
-            <p className="text-sm text-slate-400 mb-4 max-w-sm">
-              Master German with confidence. Practice A1 to B2 with native-quality exercises and personalized feedback.
+  const FooterLink: React.FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => (
+    <li>
+      <button style={linkStyle} onClick={onClick}
+        onMouseEnter={e => (e.currentTarget.style.color = '#F1F5F9')}
+        onMouseLeave={e => (e.currentTarget.style.color = '#94A3B8')}>
+        {label}
+      </button>
+    </li>
+  );
+
+  return (
+    <footer style={{ background: '#0F172A', color: '#94A3B8', marginTop: '64px' }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '48px 24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '40px' }} className="grid-cols-2 md:grid-cols-4">
+          {/* Brand col */}
+          <div>
+            <img src="https://cdn.designfast.io/image/2026-05-04/f1839146-da23-4922-a38b-c05ffeb53214.png" alt="Langrushi" style={{ width: '160px', marginBottom: '14px', objectFit: 'contain' }} />
+            <p style={{ fontFamily: 'Figtree, sans-serif', fontSize: '13px', lineHeight: 1.7, maxWidth: '280px', marginBottom: '18px' }}>
+              Master German with confidence. Practice A1 to B2 with native-quality exercises and feedback.
             </p>
-            <form onSubmit={handleSubscribe} className="flex gap-2 max-w-sm">
+            {/* Newsletter */}
+            <form onSubmit={handleSubscribe} style={{ display: 'flex', gap: '6px', maxWidth: '280px' }}>
               <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
+                type="email" value={email} onChange={e => setEmail(e.target.value)}
                 placeholder="your@email.com"
-                className="flex-1 px-3 py-2 rounded bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:border-[#1D4ED8]"
+                style={{ flex: 1, padding: '8px 12px', borderRadius: '7px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: '#F1F5F9', fontFamily: 'Figtree, sans-serif', fontSize: '13px', outline: 'none' }}
               />
-              <button type="submit" disabled={loading} className="px-4 py-2 bg-[#0a192f] hover:bg-[#020c1b] rounded text-white text-sm font-medium disabled:opacity-50">
-                {loading ? '...' : 'Subscribe'}
+              <button type="submit" disabled={loading}
+                style={{ padding: '8px 14px', borderRadius: '7px', background: 'var(--accent)', color: '#fff', fontFamily: 'Figtree, sans-serif', fontSize: '13px', fontWeight: 600, border: 'none', cursor: 'pointer', opacity: loading ? 0.6 : 1, whiteSpace: 'nowrap' }}>
+                {loading ? '…' : 'Subscribe'}
               </button>
             </form>
           </div>
 
+          {/* Platform */}
           <div>
-            <h4 className="font-semibold text-white mb-3">Platform</h4>
-            <ul className="space-y-2 text-sm">
-              <li><button onClick={() => setView('learn')} className="hover:text-white">Practice Quizzes</button></li>
-              <li><button onClick={() => setView('courses')} className="hover:text-white">Courses</button></li>
-              <li><button onClick={() => setView('pricing')} className="hover:text-white">Pricing</button></li>
-              <li><button onClick={() => setView('dashboard')} className="hover:text-white">Dashboard</button></li>
+            <h4 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '13px', color: '#F1F5F9', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Platform</h4>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <FooterLink label="Practice Quizzes" onClick={() => setView('learn')} />
+              <FooterLink label="Courses"          onClick={() => setView('courses')} />
+              <FooterLink label="Pricing"          onClick={() => setView('pricing')} />
+              <FooterLink label="Dashboard"        onClick={() => setView('dashboard')} />
             </ul>
           </div>
 
+          {/* Levels */}
           <div>
-            <h4 className="font-semibold text-white mb-3">Levels</h4>
-            <ul className="space-y-2 text-sm">
-              <li><button onClick={() => setView('learn')} className="hover:text-white">A1 Beginner</button></li>
-              <li><button onClick={() => setView('learn')} className="hover:text-white">A2 Elementary</button></li>
-              <li><button onClick={() => setView('learn')} className="hover:text-white">B1 Intermediate</button></li>
-              <li><button onClick={() => setView('learn')} className="hover:text-white">B2 Upper-Intermediate</button></li>
+            <h4 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '13px', color: '#F1F5F9', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Levels</h4>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {['A1 Beginner', 'A2 Elementary', 'B1 Intermediate', 'B2 Upper-Intermediate'].map(l => (
+                <FooterLink key={l} label={l} onClick={() => setView('learn')} />
+              ))}
             </ul>
           </div>
 
+          {/* Company */}
           <div>
-            <h4 className="font-semibold text-white mb-3">Company</h4>
-            <ul className="space-y-2 text-sm">
-              <li><button onClick={() => setView('about')} className="hover:text-white">About</button></li>
-              <li><button onClick={() => setView('contact')} className="hover:text-white">Contact</button></li>
-              <li><button onClick={() => toast({ title: 'Privacy Policy', description: 'Placeholder content' })} className="hover:text-white">Privacy</button></li>
-              <li><button onClick={() => toast({ title: 'Terms of Service', description: 'Placeholder content' })} className="hover:text-white">Terms</button></li>
+            <h4 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '13px', color: '#F1F5F9', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Company</h4>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <FooterLink label="About"   onClick={() => setView('about')} />
+              <FooterLink label="Contact" onClick={() => setView('contact')} />
+              <FooterLink label="Privacy" onClick={() => toast({ title: 'Privacy Policy' })} />
+              <FooterLink label="Terms"   onClick={() => toast({ title: 'Terms of Service' })} />
             </ul>
           </div>
         </div>
 
-        <div className="mt-10 pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-black">© 2026 Langrushi. All rights reserved. Made with care for German learners.</p>
-          <div className="flex gap-3">
-            <a href="https://www.youtube.com/@langrushi" target="_blank" rel="noreferrer" className="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition">
-              <Youtube className="w-4 h-4" />
-            </a>
-            <a href="https://www.linkedin.com/in/rushika-hemade/?_l=en_US" target="_blank" rel="noreferrer" className="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition">
-              <Linkedin className="w-4 h-4" />
-            </a>
-            <a href="https://www.facebook.com/langrushi" target="_blank" rel="noreferrer" className="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition">
-              <Facebook className="w-4 h-4" />
-            </a>
-            <a href="https://www.instagram.com/langrushi" target="_blank" rel="noreferrer" className="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition">
-              <Instagram className="w-4 h-4" />
-            </a>
-            <a href="mailto:info@langeushi.com" className="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition">
-              <Mail className="w-4 h-4" />
-            </a>
+        {/* Bottom bar */}
+        <div style={{ marginTop: '40px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <p style={{ fontFamily: 'Figtree, sans-serif', fontSize: '12px', color: '#475569' }}>
+            © 2026 Langrushi. All rights reserved.
+          </p>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {[
+              { href: 'https://www.youtube.com/@langrushi', Icon: Youtube },
+              { href: 'https://www.linkedin.com/in/rushika-hemade/', Icon: Linkedin },
+              { href: 'https://www.facebook.com/langrushi', Icon: Facebook },
+              { href: 'https://www.instagram.com/langrushi', Icon: Instagram },
+              { href: 'mailto:info@langeushi.com', Icon: Mail },
+            ].map(({ href, Icon }) => (
+              <a key={href} href={href} target="_blank" rel="noreferrer"
+                style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8', transition: 'all 180ms ease', textDecoration: 'none' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = '#F1F5F9'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = '#94A3B8'; }}
+              >
+                <Icon className="w-3.5 h-3.5" />
+              </a>
+            ))}
           </div>
         </div>
       </div>

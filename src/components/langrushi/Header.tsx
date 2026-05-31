@@ -10,123 +10,142 @@ const Header: React.FC = () => {
 
   const navItems = [
     { key: 'marketing', label: 'Home' },
-    { key: 'courses', label: 'Courses' },
-    { key: 'pricing', label: 'Pricing' },
-    { key: 'about', label: 'About' },
-    { key: 'contact', label: 'Contact' },
+    { key: 'courses',   label: 'Courses' },
+    { key: 'pricing',   label: 'Pricing' },
+    { key: 'about',     label: 'About' },
+    { key: 'contact',   label: 'Contact' },
   ] as const;
 
-  const closeAll = () => {
-    setMobileOpen(false);
-  };
   const isEmbed = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('embed') === 'true';
   if (isEmbed) return null;
 
+  const tierMap: Record<string, { label: string; cls: string }> = {
+    paid:       { label: 'Lifetime', cls: 'badge badge-green' },
+    course:     { label: `Course ${user?.courseLevel ?? ''}`, cls: 'badge badge-purple' },
+    admin:      { label: 'Admin',    cls: 'badge badge-amber' },
+    registered: { label: 'Free',     cls: 'badge badge-blue' },
+    guest:      { label: 'Guest',    cls: 'badge badge-slate' },
+  };
+  const tierInfo = user ? (tierMap[user.tier] ?? { label: user.tier, cls: 'badge badge-slate' }) : null;
+
+  const NavBtn: React.FC<{ navKey: string; label: string; icon?: React.ReactNode }> = ({ navKey, label, icon }) => {
+    const active = view === navKey;
+    return (
+      <button
+        onClick={() => setView(navKey as any)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '5px',
+          padding: '6px 12px',
+          borderRadius: '8px',
+          fontFamily: 'Figtree, sans-serif',
+          fontSize: '14px',
+          fontWeight: active ? 600 : 500,
+          color: active ? 'var(--accent-text)' : 'var(--text-secondary)',
+          background: active ? 'var(--accent-light)' : 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          transition: 'color 180ms ease, background 180ms ease',
+        }}
+        onMouseEnter={e => { if (!active) { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-elevated)'; } }}
+        onMouseLeave={e => { if (!active) { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'transparent'; } }}
+      >
+        {icon}{label}
+      </button>
+    );
+  };
+
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link to="/" onClick={closeAll} className="flex items-center gap-2">
-            <img src="https://cdn.designfast.io/image/2026-05-04/bf29e216-cf4b-45ef-b1eb-9ecd8f9b150a.png" alt="Logo" width={200} height={100} />
-          </Link>
+    <header className="topbar">
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        {/* Logo */}
+        <Link to="/" onClick={() => setMobileOpen(false)} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          <img src="https://cdn.designfast.io/image/2026-05-04/bf29e216-cf4b-45ef-b1eb-9ecd8f9b150a.png" alt="Langrushi" width={180} height={90} style={{ objectFit: 'contain' }} />
+        </Link>
 
-          <nav className="hidden md:flex items-center gap-1">
-            {navItems.map(item => (
-              <button
-                key={item.key}
-                onClick={() => setView(item.key)}
-                className={`px-3 py-2 text-sm font-medium rounded-md transition ${view === item.key ? 'text-red-600 bg-blue-50' : 'text-black hover:text-red-600 hover:bg-slate-50'
-                  }`}
-              >
-                {item.label}
-              </button>
-            ))}
-            <button
-              onClick={() => setView('learn')}
-              className={`px-3 py-2 text-sm font-medium rounded-md transition flex items-center gap-1.5 ${view === 'learn' ? 'text-red-600 bg-blue-50' : 'text-black hover:text-red-600 hover:bg-slate-50'
-                }`}
-            >
-              <BookOpen className="w-4 h-4" /> Learn
-            </button>
-            {user && (user.tier === 'paid' || user.tier === 'course' || user.tier === 'admin') && (
-              <button
-                onClick={() => setView('dashboard')}
-                className={`px-3 py-2 text-sm font-medium rounded-md transition flex items-center gap-1.5 ${view === 'dashboard' ? 'text-red-600 bg-blue-50' : 'text-black hover:text-red-600 hover:bg-slate-50'
-                  }`}
-              >
-                <LayoutDashboard className="w-4 h-4" /> Dashboard
-              </button>
-            )}
-            {user?.tier === 'admin' && (
-              <button
-                onClick={() => setView('admin')}
-                className={`px-3 py-2 text-sm font-medium rounded-md transition flex items-center gap-1.5 ${view === 'admin' ? 'text-red-600 bg-orange-50' : 'text-black hover:text-red-600 hover:bg-slate-50'
-                  }`}
-              >
-                <Shield className="w-4 h-4" /> Admin
-              </button>
-            )}
-          </nav>
+        {/* Desktop nav */}
+        <nav style={{ display: 'flex', alignItems: 'center', gap: '2px' }} className="hidden md:flex">
+          {navItems.map(item => <NavBtn key={item.key} navKey={item.key} label={item.label} />)}
+          <NavBtn navKey="learn" label="Learn" icon={<BookOpen className="w-3.5 h-3.5" />} />
+          {user && (user.tier === 'paid' || user.tier === 'course' || user.tier === 'admin') && (
+            <NavBtn navKey="dashboard" label="Dashboard" icon={<LayoutDashboard className="w-3.5 h-3.5" />} />
+          )}
+          {user?.tier === 'admin' && (
+            <NavBtn navKey="admin" label="Admin" icon={<Shield className="w-3.5 h-3.5" />} />
+          )}
+        </nav>
 
-          <div className="hidden md:flex items-center gap-2">
-            {user ? (
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-full">
-                  <UserIcon className="w-4 h-4 text-black" />
-                  <span className="text-sm font-medium text-black">{user.name}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${user.tier === 'paid' ? 'bg-green-100 text-green-700' :
-                    user.tier === 'course' ? 'bg-purple-100 text-purple-700' :
-                      user.tier === 'admin' ? 'bg-orange-100 text-orange-700' :
-                        'bg-blue-100 text-blue-700'
-                    }`}>
-                    {user.tier === 'course' ? `Course ${user.courseLevel}` : user.tier}
-                  </span>
+        {/* Desktop auth */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} className="hidden md:flex">
+          {user ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '5px 10px 5px 6px',
+                borderRadius: '999px',
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border)',
+              }}>
+                <div style={{
+                  width: '26px', height: '26px', borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #2563EB 0%, #7C3AED 100%)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 700, fontSize: '11px', color: '#fff', flexShrink: 0,
+                }}>
+                  {user.name?.[0]?.toUpperCase() ?? '?'}
                 </div>
-                <Button variant="ghost" size="sm" onClick={logout}><LogOut className="w-4 h-4" /></Button>
+                <span style={{ fontFamily: 'Figtree, sans-serif', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{user.name}</span>
+                {tierInfo && <span className={tierInfo.cls}>{tierInfo.label}</span>}
               </div>
+              <Button variant="ghost" size="sm" onClick={logout} title="Sign out" aria-label="Sign out">
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <>
+              <Button variant="ghost" onClick={() => setAuthModal('login')}>Sign In</Button>
+              <button className="btn-primary" onClick={() => setAuthModal('register')}>Get Started</button>
+            </>
+          )}
+        </div>
+
+        {/* Mobile toggle */}
+        <button
+          className="md:hidden"
+          onClick={() => setMobileOpen(!mobileOpen)}
+          style={{ padding: '6px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-primary)' }}
+          aria-label="Toggle menu"
+        >
+          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
+      </div>
+
+      {/* Mobile menu */}
+      {mobileOpen && (
+        <div style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-surface)', padding: '10px 16px 14px' }}>
+          {[...navItems, { key: 'learn' as const, label: 'Learn' }].map(item => (
+            <button key={item.key} onClick={() => { setView(item.key as any); setMobileOpen(false); }}
+              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 10px', fontFamily: 'Figtree, sans-serif', fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)', background: 'none', border: 'none', borderRadius: '7px', cursor: 'pointer', marginBottom: '2px' }}>
+              {item.label}
+            </button>
+          ))}
+          {user && (user.tier === 'paid' || user.tier === 'course' || user.tier === 'admin') && (
+            <button onClick={() => { setView('dashboard'); setMobileOpen(false); }}
+              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 10px', fontFamily: 'Figtree, sans-serif', fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)', background: 'none', border: 'none', borderRadius: '7px', cursor: 'pointer', marginBottom: '2px' }}>
+              Dashboard
+            </button>
+          )}
+          <div style={{ paddingTop: '10px', borderTop: '1px solid var(--border)', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {user ? (
+              <Button variant="outline" onClick={logout}>Sign out ({user.name})</Button>
             ) : (
               <>
-                <Button variant="ghost" onClick={() => setAuthModal('login')}>Sign In</Button>
-                <Button className="bg-[#0a192f] hover:bg-[#020c1b]" onClick={() => setAuthModal('register')}>
-                  Get Started
-                </Button>
+                <Button variant="outline" onClick={() => { setAuthModal('login'); setMobileOpen(false); }}>Sign In</Button>
+                <button className="btn-primary w-full" onClick={() => { setAuthModal('register'); setMobileOpen(false); }}>Get Started</button>
               </>
             )}
           </div>
-
-          <button className="md:hidden p-2" onClick={() => setMobileOpen(!mobileOpen)}>
-            {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
         </div>
-
-        {mobileOpen && (
-          <div className="md:hidden py-3 border-t border-slate-200 space-y-1">
-            {[...navItems, { key: 'learn' as const, label: 'Learn' }].map(item => (
-              <button
-                key={item.key}
-                onClick={() => { setView(item.key as any); setMobileOpen(false); }}
-                className="block w-full text-left px-3 py-2 rounded-md hover:bg-slate-50"
-              >
-                {item.label}
-              </button>
-            ))}
-            {user && (user.tier === 'paid' || user.tier === 'course' || user.tier === 'admin') && (
-              <button onClick={() => { setView('dashboard'); setMobileOpen(false); }} className="block w-full text-left px-3 py-2 rounded-md hover:bg-slate-50">Dashboard</button>
-            )}
-            <div className="pt-2 border-t border-slate-200 flex flex-col gap-2">
-              {user ? (
-                <Button variant="outline" onClick={logout}>Sign out ({user.name})</Button>
-              ) : (
-                <>
-                  <Button variant="outline" onClick={() => { setAuthModal('login'); setMobileOpen(false); }}>Sign In</Button>
-                  <Button className="bg-[#0a192f]" onClick={() => { setAuthModal('register'); setMobileOpen(false); }}>Get Started</Button>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+      )}
     </header>
   );
 };

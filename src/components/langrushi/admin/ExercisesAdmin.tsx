@@ -1,26 +1,73 @@
 import React, { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { LEVELS, CATEGORIES, Level, Category, AccessFlag, ExerciseType, Exercise } from '@/lib/langrushi-data';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/use-toast';
-import { Plus, Trash2, Edit2, X, Save } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Save, Search } from 'lucide-react';
+import CollapsibleCard from './CollapsibleCard';
 
-const emptyForm = (): FormState => ({
-  title: '', level: 'A1' as Level, category: 'Listening' as Category, subPart: 'Teil 1',
-  type: 'Interactive' as ExerciseType, access: 'FREE_ALL' as AccessFlag,
-  mediaUrl: '', prompt: '', modelAnswer: '', questions: [], guidance: [],
-  answerDisplayMode: 'instant', allowSkip: true,
-});
+/* ── Form primitives ─────────────────────────── */
+const Label: React.FC<{ children: React.ReactNode; optional?: boolean }> = ({ children, optional }) => (
+  <label style={{ display: 'block', fontFamily: 'Figtree, sans-serif', fontWeight: 600, fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '5px', letterSpacing: '0.01em' }}>
+    {children}
+    {optional && <span style={{ fontWeight: 400, color: 'var(--text-muted)', marginLeft: '4px' }}>(optional)</span>}
+  </label>
+);
 
+const Inp = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
+  <input {...props} className={`input ${props.className ?? ''}`} />
+);
+
+const Sel = ({ children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) => (
+  <select {...props} className="select">{children}</select>
+);
+
+const Txt = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
+  <textarea {...props} className="textarea" />
+);
+
+/* ── Access & level badges ───────────────────── */
+const AccessBadge: React.FC<{ access: string }> = ({ access }) => {
+  const map: Record<string, [string, string]> = {
+    FREE_ALL:        ['Free for All',  'badge badge-green'],
+    FREE_REGISTERED: ['Registered',    'badge badge-blue'],
+    PAID:            ['Paid Only',     'badge badge-purple'],
+  };
+  const [label, cls] = map[access] ?? [access, 'badge badge-slate'];
+  return <span className={cls}>{label}</span>;
+};
+
+const LevelBadge: React.FC<{ level: string }> = ({ level }) => {
+  const map: Record<string, string> = { A1: 'badge badge-green', A2: 'badge badge-blue', B1: 'badge badge-purple', B2: 'badge badge-amber' };
+  return <span className={map[level] ?? 'badge badge-slate'}>{level}</span>;
+};
+
+/* ── Empty form ──────────────────────────────── */
 interface FormState {
   title: string; level: Level; category: Category; subPart: string;
-  type: ExerciseType; access: AccessFlag; mediaUrl: string;
+  type: ExerciseType; access: AccessFlag; mediaUrl: string; transcript: string;
   prompt: string; modelAnswer: string; questions: any[]; guidance: string[];
   answerDisplayMode: string; allowSkip: boolean;
 }
 
+const emptyForm = (): FormState => ({
+  title: '', level: 'A1', category: 'Listening', subPart: 'Teil 1',
+  type: 'Interactive', access: 'FREE_ALL', mediaUrl: '', transcript: '',
+  prompt: '', modelAnswer: '', questions: [], guidance: [],
+  answerDisplayMode: 'instant', allowSkip: true,
+});
+
+/* ── Skeleton row ────────────────────────────── */
+const SkeletonRow = () => (
+  <tr>
+    {[280, 50, 90, 70, 50, 90, 80].map((w, i) => (
+      <td key={i} style={{ padding: '13px 14px', borderBottom: '1px solid var(--border)' }}>
+        <div className="skeleton" style={{ height: '14px', width: `${w}px`, maxWidth: '100%' }} />
+      </td>
+    ))}
+  </tr>
+);
+
+/* ────────────────────────────────────────────── */
 const ExercisesAdmin: React.FC = () => {
   const { exercises, addExercise, updateExercise, removeExercise } = useAppContext();
   const [mode, setMode] = useState<'list' | 'add' | 'edit'>('list');
@@ -28,68 +75,52 @@ const ExercisesAdmin: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm());
   const [filter, setFilter] = useState({ level: '', category: '', search: '' });
+  const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
 
   const startAdd = () => { setForm(emptyForm()); setEditId(null); setMode('add'); };
   const startEdit = (ex: Exercise) => {
     setForm({
       title: ex.title, level: ex.level, category: ex.category, subPart: ex.subPart,
       type: ex.type, access: ex.access, mediaUrl: ex.mediaUrl || '',
-      prompt: ex.prompt || '', modelAnswer: ex.modelAnswer || '',
-      questions: ex.questions || [], guidance: ex.guidance || [],
-      answerDisplayMode: ex.answerDisplayMode || 'instant',
+      transcript: ex.transcript || '', prompt: ex.prompt || '',
+      modelAnswer: ex.modelAnswer || '', questions: ex.questions || [],
+      guidance: ex.guidance || [], answerDisplayMode: ex.answerDisplayMode || 'instant',
       allowSkip: ex.allowSkip !== false,
     });
-    setEditId(ex.id);
-    setMode('edit');
+    setEditId(ex.id); setMode('edit');
   };
-  const cancelForm = () => { setMode('list'); setEditId(null); setForm(emptyForm()); };
+  const cancel = () => { setMode('list'); setEditId(null); setForm(emptyForm()); setActiveQuestionId(null); };
 
   const handleSave = async () => {
-    if (!form.title) { toast({ title: 'Title required' }); return; }
+    if (!form.title) { toast({ title: 'Title is required' }); return; }
     setBusy(true);
     try {
       if (mode === 'add') {
-        await addExercise({
-          id: 'e' + Date.now(), ...form,
+        await addExercise({ id: 'e' + Date.now(), ...form,
           questions: form.type === 'Interactive' ? form.questions : undefined,
-          guidance: form.type === 'Passive' ? form.guidance : undefined,
-        });
+          guidance: form.type === 'Passive' ? form.guidance : undefined });
         toast({ title: 'Exercise created' });
       } else if (mode === 'edit' && editId) {
-        await updateExercise(editId, {
-          ...form,
+        await updateExercise(editId, { ...form,
           questions: form.type === 'Interactive' ? form.questions : undefined,
-          guidance: form.type === 'Passive' ? form.guidance : undefined,
-        });
+          guidance: form.type === 'Passive' ? form.guidance : undefined });
         toast({ title: 'Exercise updated' });
       }
-      cancelForm();
-    } catch (e: any) {
-      toast({ title: 'Failed to save', description: e?.message });
-    }
+      cancel();
+    } catch (e: any) { toast({ title: 'Failed to save', description: e?.message }); }
     setBusy(false);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this exercise and all its questions?')) return;
+  const deleteEx = async (id: string) => {
+    if (!confirm('Delete this exercise?')) return;
     await removeExercise(id);
     toast({ title: 'Deleted' });
   };
 
-  const addQuestion = () => {
-    const newQ = { id: 'q' + Date.now(), text: '', type: 'MCQ', options: ['', '', '', ''], correctAnswer: '', hint: '', explanation: '' };
-    setForm({ ...form, questions: [...form.questions, newQ] });
-  };
-  const updateQuestion = (index: number, patch: any) => {
-    const qs = [...form.questions];
-    qs[index] = { ...qs[index], ...patch };
-    setForm({ ...form, questions: qs });
-  };
-  const removeQuestion = (index: number) => {
-    setForm({ ...form, questions: form.questions.filter((_, i) => i !== index) });
-  };
+  const addQ = () => setForm({ ...form, questions: [...form.questions, { id: 'q' + Date.now(), text: '', type: 'MCQ', options: ['', '', '', ''], correctAnswer: '', hint: '', explanation: '' }] });
+  const updQ = (i: number, p: any) => { const qs = [...form.questions]; qs[i] = { ...qs[i], ...p }; setForm({ ...form, questions: qs }); };
+  const delQ = (i: number) => setForm({ ...form, questions: form.questions.filter((_, j) => j !== i) });
 
-  // Filter exercises
   const filtered = exercises.filter(e => {
     if (filter.level && e.level !== filter.level) return false;
     if (filter.category && e.category !== filter.category) return false;
@@ -97,218 +128,293 @@ const ExercisesAdmin: React.FC = () => {
     return true;
   });
 
+  /* ── Form view ─────────────────────────────── */
+
+
   if (mode !== 'list') {
     return (
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-xl text-black">{mode === 'add' ? 'New Exercise' : `Edit: ${form.title || 'Untitled'}`}</h2>
-          <Button variant="ghost" onClick={cancelForm}><X className="w-4 h-4 mr-1" /> Cancel</Button>
+        {/* Form header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <div className="section-label">{mode === 'add' ? 'New Exercise' : 'Edit Exercise'}</div>
+            <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)' }}>
+              {mode === 'add' ? 'Create Exercise' : (form.title || 'Untitled')}
+            </h2>
+          </div>
+          <button className="btn-ghost" onClick={cancel} style={{ gap: '6px' }}>
+            <X className="w-4 h-4" /> Cancel
+          </button>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-          <h3 className="font-bold text-lg mb-4 text-red-600">Exercise Details</h3>
-          <div className="grid sm:grid-cols-2 gap-4 mb-6">
-            <div><Label>Title</Label><Input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="e.g. Am Bahnhof" /></div>
-            <div><Label>Sub-part</Label><Input value={form.subPart} onChange={e => setForm({ ...form, subPart: e.target.value })} placeholder="e.g. Teil 1" /></div>
-            <div>
-              <Label>Level</Label>
-              <select className="w-full mt-1 border rounded-md p-2 text-sm" value={form.level} onChange={e => setForm({ ...form, level: e.target.value as Level })}>
-                {LEVELS.map(l => <option key={l}>{l}</option>)}
-              </select>
-            </div>
-            <div>
-              <Label>Category</Label>
-              <select className="w-full mt-1 border rounded-md p-2 text-sm" value={form.category} onChange={e => setForm({ ...form, category: e.target.value as Category })}>
-                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <Label>Type</Label>
-              <select className="w-full mt-1 border rounded-md p-2 text-sm" value={form.type} onChange={e => setForm({ ...form, type: e.target.value as ExerciseType })}>
-                <option>Interactive</option><option>Passive</option>
-              </select>
-            </div>
-            <div>
-              <Label>Access</Label>
-              <select className="w-full mt-1 border rounded-md p-2 text-sm" value={form.access} onChange={e => setForm({ ...form, access: e.target.value as AccessFlag })}>
+        {/* Card 1: Exercise Details */}
+        <CollapsibleCard cardKey="details" label="Exercise Details">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div><Label>Title</Label><Inp value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="e.g. Am Bahnhof" /></div>
+            <div><Label>Sub-part</Label><Inp value={form.subPart} onChange={e => setForm({ ...form, subPart: e.target.value })} placeholder="e.g. Teil 1" /></div>
+            <div><Label>Level</Label><Sel value={form.level} onChange={e => setForm({ ...form, level: e.target.value as Level })}>{LEVELS.map(l => <option key={l}>{l}</option>)}</Sel></div>
+            <div><Label>Category</Label><Sel value={form.category} onChange={e => setForm({ ...form, category: e.target.value as Category })}>{CATEGORIES.map(c => <option key={c}>{c}</option>)}</Sel></div>
+            <div><Label>Type</Label><Sel value={form.type} onChange={e => setForm({ ...form, type: e.target.value as ExerciseType })}><option>Interactive</option><option>Passive</option></Sel></div>
+            <div><Label>Access</Label>
+              <Sel value={form.access} onChange={e => setForm({ ...form, access: e.target.value as AccessFlag })}>
                 <option value="FREE_ALL">Free for all</option>
                 <option value="FREE_REGISTERED">Free for registered</option>
                 <option value="PAID">Paid only</option>
-              </select>
+              </Sel>
             </div>
           </div>
+        </CollapsibleCard>
 
-          {form.type === 'Interactive' ? (
-            <div className="space-y-6">
+        {form.type === 'Interactive' ? (
+          <>
+            {/* Card 2: Media & Settings */}
+            <CollapsibleCard cardKey="media" label="Media & Settings">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-slate-50 p-4 rounded-lg">
-                  <Label>Media URL (Audio/Video)</Label>
-                  <Input value={form.mediaUrl} onChange={e => setForm({ ...form, mediaUrl: e.target.value })} placeholder="https://..." className="mt-1" />
+                <div>
+                  <Label optional>Media URL</Label>
+                  <Inp value={form.mediaUrl} onChange={e => setForm({ ...form, mediaUrl: e.target.value })} placeholder="https://..." />
                 </div>
-                <div className="bg-slate-50 p-4 rounded-lg grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Answer Display Mode</Label>
-                    <select className="w-full mt-1 border rounded p-1.5 text-sm" value={form.answerDisplayMode} onChange={e => setForm({ ...form, answerDisplayMode: e.target.value })}>
-                      <option value="instant">Show instantly</option>
-                      <option value="end">Show at the end</option>
-                      <option value="none">Don't show</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-2 mt-6">
-                    <input type="checkbox" id="allowSkip" checked={form.allowSkip} onChange={e => setForm({ ...form, allowSkip: e.target.checked })} className="w-4 h-4 rounded" />
-                    <Label htmlFor="allowSkip">Allow Skip</Label>
-                  </div>
+                <div>
+                  <Label>Answer Display</Label>
+                  <Sel value={form.answerDisplayMode} onChange={e => setForm({ ...form, answerDisplayMode: e.target.value })}>
+                    <option value="instant">Show instantly</option>
+                    <option value="end">Show at end</option>
+                    <option value="none">Don't show</option>
+                  </Sel>
+                </div>
+                <div className="md:col-span-2">
+                  <Label optional>Transcript (shown as sidebar during exercise)</Label>
+                  <Txt rows={3} value={form.transcript} onChange={e => setForm({ ...form, transcript: e.target.value })} placeholder="Paste the audio transcript here..." />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input type="checkbox" id="allowSkip" checked={form.allowSkip} onChange={e => setForm({ ...form, allowSkip: e.target.checked })}
+                    style={{ width: '15px', height: '15px', accentColor: 'var(--accent)', cursor: 'pointer' }} />
+                  <label htmlFor="allowSkip" style={{ fontFamily: 'Figtree, sans-serif', fontSize: '13px', color: 'var(--text-secondary)', cursor: 'pointer' }}>Allow Skip</label>
                 </div>
               </div>
+            </CollapsibleCard>
 
-              <div className="border-t pt-4">
-                <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-bold">Questions ({form.questions.length})</h4>
-                  <Button size="sm" variant="outline" onClick={addQuestion}><Plus className="w-4 h-4 mr-1" /> Add Question</Button>
-                </div>
-
-                <div className="space-y-4">
-                  {form.questions.map((q, i) => (
-                    <div key={q.id} className="border border-slate-200 rounded-lg p-4 bg-white shadow-sm relative">
-                      <Button size="sm" variant="ghost" className="absolute top-2 right-2 text-red-500" onClick={() => removeQuestion(i)}><Trash2 className="w-4 h-4" /></Button>
+            {/* Card 3: Questions */}
+            <CollapsibleCard
+              cardKey="questions"
+              label="Questions"
+              badge={
+                <span style={{
+                  background: 'var(--accent)', color: '#fff', borderRadius: '999px',
+                  fontSize: '10px', fontWeight: 700, padding: '1px 8px', lineHeight: '18px',
+                }}>{form.questions.length}</span>
+              }
+            >
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+                <button className="btn-ghost" onClick={addQ} style={{ fontSize: '12px', padding: '7px 14px', gap: '5px' }}>
+                  <Plus className="w-3.5 h-3.5" /> Add Question
+                </button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {form.questions.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '28px', background: 'var(--bg-elevated)', borderRadius: '10px', color: 'var(--text-muted)', fontSize: '13px', border: '1px dashed var(--border-strong)' }}>
+                    No questions yet — click "Add Question" to start.
+                  </div>
+                )}
+                {form.questions.map((q, i) => {
+                  const isActive = q.id === activeQuestionId;
+                  return (
+                    <div
+                      key={q.id}
+                      onClick={() => setActiveQuestionId(q.id)}
+                      onFocusCapture={() => setActiveQuestionId(q.id)}
+                      style={{
+                        background: isActive ? 'rgba(53, 99, 233, 0.02)' : 'var(--bg-elevated)',
+                        borderRadius: '10px',
+                        padding: '16px',
+                        border: isActive ? '2px solid #3563E9' : '1px solid var(--border)',
+                        position: 'relative',
+                        transition: 'all 200ms ease',
+                        boxShadow: isActive ? '0 4px 12px rgba(53, 99, 233, 0.08)' : 'none',
+                      }}
+                    >
+                      <button onClick={(e) => { e.stopPropagation(); delQ(i); }} style={{ position: 'absolute', top: '10px', right: '10px', background: 'var(--danger-bg)', border: '1px solid rgba(220,38,38,0.15)', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', color: 'var(--danger)' }} title="Remove question">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                       <div className="grid gap-3">
-                        <div><Label>Question Text</Label><Input value={q.text} onChange={e => updateQuestion(i, { text: e.target.value })} /></div>
+                        <div><Label>Question {i + 1}</Label><Inp value={q.text} onChange={e => updQ(i, { text: e.target.value })} placeholder="Enter question text..." /></div>
                         <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <Label>Type</Label>
-                            <select className="w-full mt-1 border rounded p-1.5 text-sm" value={q.type} onChange={e => updateQuestion(i, { type: e.target.value })}>
+                          <div><Label>Type</Label>
+                            <Sel value={q.type} onChange={e => updQ(i, { type: e.target.value })}>
                               <option value="MCQ">Multiple Choice</option>
                               <option value="FILL_BLANK">Fill in Blank</option>
                               <option value="TRUE_FALSE">True/False</option>
-                            </select>
+                            </Sel>
                           </div>
-                          <div><Label>Correct Answer</Label><Input value={q.correctAnswer} onChange={e => updateQuestion(i, { correctAnswer: e.target.value })} /></div>
+                          <div><Label>Correct Answer</Label><Inp value={q.correctAnswer} onChange={e => updQ(i, { correctAnswer: e.target.value })} /></div>
                         </div>
                         {q.type === 'MCQ' && (
                           <div className="grid grid-cols-2 gap-2">
-                            {(q.options || ['', '', '', '']).map((opt: string, optIdx: number) => (
-                              <div key={optIdx}><Label className="text-[10px] text-slate-400">Option {optIdx + 1}</Label><Input value={opt} onChange={e => {
-                                const newOpts = [...(q.options || ['', '', '', ''])];
-                                newOpts[optIdx] = e.target.value;
-                                updateQuestion(i, { options: newOpts });
-                              }} className="h-8 text-xs" /></div>
+                            {(q.options || ['', '', '', '']).map((opt: string, oi: number) => (
+                              <div key={oi}>
+                                <Label>Option {oi + 1}</Label>
+                                <Inp value={opt} style={{ height: '36px', fontSize: '13px' }} onChange={e => {
+                                  const o = [...(q.options || ['', '', '', ''])]; o[oi] = e.target.value; updQ(i, { options: o });
+                                }} />
+                              </div>
                             ))}
                           </div>
                         )}
                         <div className="grid grid-cols-2 gap-3">
-                          <div><Label>Hint <span className="text-slate-400 text-[10px]">(optional)</span></Label><Input value={q.hint || ''} onChange={e => updateQuestion(i, { hint: e.target.value })} placeholder="A helpful hint..." /></div>
-                          <div><Label>Explanation <span className="text-slate-400 text-[10px]">(optional)</span></Label><Input value={q.explanation || ''} onChange={e => updateQuestion(i, { explanation: e.target.value })} placeholder="Why this is correct..." /></div>
+                          <div><Label optional>Hint</Label><Inp value={q.hint || ''} onChange={e => updQ(i, { hint: e.target.value })} placeholder="A helpful hint..." /></div>
+                          <div><Label optional>Explanation</Label><Inp value={q.explanation || ''} onChange={e => updQ(i, { explanation: e.target.value })} placeholder="Why this is correct..." /></div>
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div><Label>Prompt</Label><Input value={form.prompt} onChange={e => setForm({ ...form, prompt: e.target.value })} placeholder="Write a short email..." /></div>
-              <div><Label>Model Answer</Label><textarea className="w-full border rounded-md p-2 mt-1 text-sm" rows={5} value={form.modelAnswer} onChange={e => setForm({ ...form, modelAnswer: e.target.value })} /></div>
-              <div>
-                <Label>Guidance Points (one per line)</Label>
-                <textarea
-                  className="w-full border rounded-md p-2 mt-1 text-sm"
-                  rows={3}
-                  value={form.guidance.join('\n')}
-                  onChange={e => setForm({ ...form, guidance: e.target.value.split('\n').filter(l => l.trim()) })}
-                  placeholder={"Point 1\nPoint 2..."}
-                />
-              </div>
-            </div>
-          )}
 
-          <div className="mt-8 pt-4 border-t flex justify-end gap-3">
-            <Button variant="outline" onClick={cancelForm}>Cancel</Button>
-            <Button onClick={handleSave} disabled={busy} className="bg-[#0a192f] min-w-[140px]">
-              <Save className="w-4 h-4 mr-1" />
-              {busy ? 'Saving...' : mode === 'add' ? 'Publish Exercise' : 'Save Changes'}
-            </Button>
-          </div>
+              {/* Bottom Add Question Button */}
+              {form.questions.length > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                  <button className="btn-ghost" onClick={addQ} style={{ fontSize: '12px', padding: '7px 14px', gap: '5px' }}>
+                    <Plus className="w-3.5 h-3.5" /> Add Question
+                  </button>
+                </div>
+              )}
+            </CollapsibleCard>
+          </>
+        ) : (
+          /* Card 4: Writing Prompt */
+          <CollapsibleCard cardKey="writing" label="Writing Prompt">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div><Label>Prompt</Label><Inp value={form.prompt} onChange={e => setForm({ ...form, prompt: e.target.value })} placeholder="Write a short email about..." /></div>
+              <div><Label>Model Answer</Label><Txt rows={6} value={form.modelAnswer} onChange={e => setForm({ ...form, modelAnswer: e.target.value })} /></div>
+              <div><Label optional>Guidance Points (one per line)</Label><Txt rows={3} value={form.guidance.join('\n')} onChange={e => setForm({ ...form, guidance: e.target.value.split('\n').filter(l => l.trim()) })} placeholder={"Point 1\nPoint 2..."} /></div>
+            </div>
+          </CollapsibleCard>
+        )}
+
+        {/* Global Save / Cancel Actions */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
+          <button className="btn-ghost" onClick={cancel}>Cancel</button>
+          <button className="btn-primary" onClick={handleSave} disabled={busy} style={{ minWidth: '150px', opacity: busy ? 0.6 : 1 }}>
+            <Save className="w-4 h-4" />
+            {busy ? 'Saving...' : mode === 'add' ? 'Publish Exercise' : 'Save Changes'}
+          </button>
         </div>
       </div>
     );
   }
 
+  /* ── List view ─────────────────────────────── */
   return (
     <div>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-        <h2 className="font-bold text-xl">Exercises ({exercises.length})</h2>
-        <Button onClick={startAdd} className="bg-[#0a192f] hover:bg-[#020c1b]">
-          <Plus className="w-4 h-4 mr-1" /> New Exercise
-        </Button>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <div className="section-label">Content Management</div>
+          <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)' }}>
+            Exercises
+            <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '13px', fontWeight: 400, color: 'var(--text-muted)', marginLeft: '8px' }}>
+              ({filtered.length} / {exercises.length})
+            </span>
+          </h2>
+        </div>
+        <button className="btn-primary" onClick={startAdd}>
+          <Plus className="w-4 h-4" /> New Exercise
+        </button>
       </div>
 
       {/* Filters */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 mb-4 flex flex-wrap gap-3 items-end">
-        <div className="flex-1 min-w-[150px]">
-          <Label className="text-xs">Search</Label>
-          <Input value={filter.search} onChange={e => setFilter({ ...filter, search: e.target.value })} placeholder="Search by title..." className="h-9" />
+      <div className="card p-4 mb-5" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+        <div style={{ flex: '1 1 180px', position: 'relative' }}>
+          <Search className="w-4 h-4" style={{ position: 'absolute', left: '11px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+          <Inp value={filter.search} onChange={e => setFilter({ ...filter, search: e.target.value })} placeholder="Search by title..." style={{ paddingLeft: '34px' }} />
         </div>
-        <div>
-          <Label className="text-xs">Level</Label>
-          <select className="border rounded p-1.5 text-sm" value={filter.level} onChange={e => setFilter({ ...filter, level: e.target.value })}>
-            <option value="">All</option>
+        <div style={{ minWidth: '120px' }}>
+          <Sel value={filter.level} onChange={e => setFilter({ ...filter, level: e.target.value })}>
+            <option value="">All Levels</option>
             {LEVELS.map(l => <option key={l}>{l}</option>)}
-          </select>
+          </Sel>
         </div>
-        <div>
-          <Label className="text-xs">Category</Label>
-          <select className="border rounded p-1.5 text-sm" value={filter.category} onChange={e => setFilter({ ...filter, category: e.target.value })}>
-            <option value="">All</option>
+        <div style={{ minWidth: '150px' }}>
+          <Sel value={filter.category} onChange={e => setFilter({ ...filter, category: e.target.value })}>
+            <option value="">All Categories</option>
             {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-          </select>
+          </Sel>
         </div>
+        {(filter.search || filter.level || filter.category) && (
+          <button onClick={() => setFilter({ level: '', category: '', search: '' })} className="btn-danger" style={{ padding: '6px 12px', fontSize: '12px' }}>
+            Clear
+          </button>
+        )}
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left">
+      {/* Table */}
+      <div className="card" style={{ overflow: 'hidden' }}>
+        <table className="data-table">
+          <thead>
             <tr>
-              <th className="p-4">Title</th>
-              <th className="p-4">Level</th>
-              <th className="p-4">Category</th>
-              <th className="p-4">Type</th>
-              <th className="p-4">Questions</th>
-              <th className="p-4">Access</th>
-              <th className="p-4 text-right">Actions</th>
+              <th style={{ width: '35%' }}>Title</th>
+              <th>Level</th>
+              <th>Category</th>
+              <th>Type</th>
+              <th style={{ textAlign: 'center' }}>Questions</th>
+              <th>Access</th>
+              <th style={{ textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map(e => (
-              <tr key={e.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
-                <td className="p-4 font-medium text-black">{e.title}</td>
-                <td className="p-4"><span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-bold">{e.level}</span></td>
-                <td className="p-4 text-slate-600">{e.category}</td>
-                <td className="p-4 text-slate-600 text-xs">{e.type}</td>
-                <td className="p-4 text-center font-bold text-black">{e.type === 'Interactive' ? (e.questions?.length || 0) : '—'}</td>
-                <td className="p-4">
-                  <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${
-                    e.access === 'FREE_ALL' ? 'bg-green-100 text-green-700' :
-                    e.access === 'FREE_REGISTERED' ? 'bg-orange-100 text-orange-700' : 'bg-purple-100 text-purple-700'
-                  }`}>
-                    {e.access.replace('_', ' ')}
-                  </span>
+            {filtered.length === 0 && filtered === exercises ? (
+              // Loading skeleton
+              Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan={7}>
+                  <div className="empty-state">
+                    <div className="empty-state-icon"><Search className="w-5 h-5" style={{ color: 'var(--text-muted)' }} /></div>
+                    <p style={{ fontFamily: 'Figtree, sans-serif', fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)', margin: '0 0 4px' }}>No exercises found</p>
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>Try adjusting your search or filters.</p>
+                  </div>
                 </td>
-                <td className="p-4 text-right">
-                  <div className="flex gap-1 justify-end">
-                    <Button size="sm" variant="ghost" className="hover:bg-blue-50 hover:text-blue-600" onClick={() => startEdit(e)}>
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
-                    <Button size="sm" variant="ghost" className="hover:bg-red-50 hover:text-red-600" onClick={() => handleDelete(e.id)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+              </tr>
+            ) : filtered.map(e => (
+              <tr key={e.id}>
+                <td style={{ color: 'var(--text-primary)', fontWeight: 600, maxWidth: '280px' }}>
+                  <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.title}</div>
+                </td>
+                <td><LevelBadge level={e.level} /></td>
+                <td>{e.category}</td>
+                <td>
+                  <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>{e.type}</span>
+                </td>
+                <td style={{ textAlign: 'center', fontFamily: 'IBM Plex Mono, monospace', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  {e.type === 'Interactive' ? (e.questions?.length || 0) : '—'}
+                </td>
+                <td><AccessBadge access={e.access} /></td>
+                <td style={{ textAlign: 'right' }}>
+                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={() => startEdit(e)}
+                      title="Edit"
+                      aria-label="Edit exercise"
+                      style={{ padding: '6px 8px', background: 'var(--accent-light)', border: '1px solid rgba(37,99,235,0.15)', borderRadius: '6px', color: 'var(--accent)', cursor: 'pointer', transition: 'background 180ms ease' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-mid)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'var(--accent-light)')}
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => deleteEx(e.id)}
+                      title="Delete"
+                      aria-label="Delete exercise"
+                      style={{ padding: '6px 8px', background: 'var(--danger-bg)', border: '1px solid rgba(220,38,38,0.15)', borderRadius: '6px', color: 'var(--danger)', cursor: 'pointer', transition: 'background 180ms ease' }}
+                      onMouseEnter={ev => (ev.currentTarget.style.background = 'rgba(220,38,38,0.14)')}
+                      onMouseLeave={ev => (ev.currentTarget.style.background = 'var(--danger-bg)')}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </td>
               </tr>
             ))}
-            {filtered.length === 0 && (
-              <tr><td colSpan={7} className="p-8 text-center text-slate-400">No exercises match your filters.</td></tr>
-            )}
           </tbody>
         </table>
       </div>

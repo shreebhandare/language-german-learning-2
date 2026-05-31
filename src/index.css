@@ -1,5 +1,4 @@
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@300;400;500;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -111,11 +110,11 @@
 }
 
 .markdown-preview {
-  @apply prose max-w-none prose-blue dark:prose-invert;
+  @apply prose max-w-none prose-blue dark:prose-invert; 
 }
 
 .markdown-preview pre {
-  @apply bg-secondary p-4 rounded-md overflow-x-auto;
+  @apply bg-secondary p-4 rounded-md overflow-x-auto;   
 }
 
 .markdown-preview code {
@@ -128,7 +127,7 @@
 .markdown-preview h4,
 .markdown-preview h5,
 .markdown-preview h6 {
-  @apply font-serif font-semibold text-foreground;
+  @apply font-serif font-semibold text-foreground;      
   font-stretch: 75%;
 }
 
@@ -136,3 +135,440 @@
 .markdown-preview ol {
   @apply my-4 ml-6;
 }
+
+/* ─── Admin Panel Scoped Styles ──────────────────────────────────────── */
+
+.admin-panel {
+  /* Design Tokens for Admin Panel */
+  --bg-base:     #F4F6F9;
+  --bg-surface:  #FFFFFF;
+  --bg-elevated: #F1F5F9;
+  --bg-hover:    #F8FAFC;
+
+  /* Borders */
+  --border:        #E2E8F0;
+  --border-strong: #CBD5E1;
+
+  /* Accent */
+  --accent:      #3563E9;
+  --accent-light: rgba(53, 99, 233, 0.08);
+  --accent-mid:   rgba(53, 99, 233, 0.15);
+  --accent-text:  #1E5AE6;
+
+  /* Text */
+  --text-primary:   #0F172A;
+  --text-secondary: #475569;
+  --text-muted:     #94A3B8;
+
+  /* Status */
+  --success:    #059669;
+  --success-bg: rgba(5,150,105,0.08);
+  --warning:    #D97706;
+  --warning-bg: rgba(217,119,6,0.08);
+  --danger:     #DC2626;
+  --danger-bg:  rgba(220,38,38,0.08);
+  --purple:     #7C3AED;
+  --purple-bg:  rgba(124,58,237,0.08);
+
+  /* Shadows */
+  --shadow-card:  0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-hover: 0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-drop:  0 8px 24px rgba(0,0,0,0.10);
+
+  /* Radius */
+  --r-sm:  6px;
+  --r-md:  10px;
+  --r-lg:  14px;
+  --r-xl:  20px;
+
+  /* Fonts */
+  font-family: 'Roboto', sans-serif !important;
+}
+
+/* Base resets inside the admin panel to prevent conflict with outer fonts */
+.admin-panel,
+.admin-panel .input,
+.admin-panel .select,
+.admin-panel .textarea,
+.admin-panel label,
+.admin-panel button,
+.admin-panel table,
+.admin-panel span,
+.admin-panel p,
+.admin-panel h1,
+.admin-panel h2,
+.admin-panel h3 {
+  font-family: 'Roboto', sans-serif !important;
+}
+
+/* Layout overrides */
+.admin-panel {
+  background-color: #F4F6F9 !important; /* Panel background */
+}
+
+.admin-panel aside {
+  background-color: #FFFFFF !important; /* White sidebar */
+  border-right: 1px solid #E9EBF1 !important;
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+
+.admin-panel .skeleton {
+  background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: var(--r-md);
+}
+
+/* Fade-up entrance */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.admin-panel .animate-fade-up {
+  animation: fade-up 0.3s ease both;
+}
+
+/* Surface card */
+.admin-panel .card {
+  background: #FFFFFF !important;
+  border: 1px solid #E9EBF1 !important;
+  border-radius: var(--r-lg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02) !important;
+  transition: all 200ms ease;
+}
+
+.admin-panel .card:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04) !important;
+  border-color: #DDE1EA !important;
+}
+
+/* Section label (mini overline) */
+.admin-panel .section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.admin-panel .section-label-accent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+}
+
+/* Buttons */
+.admin-panel .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 18px;
+  background-color: #3563E9 !important;
+  color: #FFFFFF !important;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--r-sm);
+  border: none;
+  cursor: pointer;
+  transition: all 150ms ease !important;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.admin-panel .btn-primary:hover {
+  background-color: #1E5AE6 !important;
+  box-shadow: 0 4px 12px rgba(53, 99, 233, 0.25) !important;
+}
+
+.admin-panel .btn-primary:active {
+  background-color: #1A4ED8 !important;
+}
+
+.admin-panel .btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.admin-panel .btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 18px;
+  background-color: #FFFFFF !important;
+  border: 1px solid #E2E5ED !important;
+  color: #4A5568 !important;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: background 200ms ease, border-color 200ms ease, color 200ms ease;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.admin-panel .btn-ghost:hover {
+  background-color: #F8FAFC !important;
+  border-color: #CBD5E1 !important;
+  color: #1A202C !important;
+}
+
+.admin-panel .btn-ghost:active {
+  background: #E2E8F0 !important;
+}
+
+.admin-panel .btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 7px 14px;
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--r-sm);
+  border: 1px solid rgba(220,38,38,0.18);
+  cursor: pointer;
+  transition: background 200ms ease;
+}
+
+.admin-panel .btn-danger:hover {
+  background: rgba(220,38,38,0.14);
+}
+
+/* Inputs, Selects, Textareas inside Admin Panel */
+.admin-panel .input,
+.admin-panel .select,
+.admin-panel .textarea {
+  height: 40px;
+  width: 100%;
+  padding: 0 12px;
+  background-color: #F0F2F6 !important; /* Soft gray-blue background */
+  border: 1px solid #D8DEE9 !important; /* Subtle border */
+  border-radius: var(--r-sm) !important;
+  color: #1A202C !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02) !important;
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+  font-size: 14px !important;
+  outline: none;
+}
+
+.admin-panel .textarea {
+  height: auto;
+  padding: 10px 12px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.admin-panel .input::placeholder {
+  color: var(--text-muted);
+}
+
+.admin-panel .input:hover,
+.admin-panel .select:hover,
+.admin-panel .textarea:hover {
+  border-color: #B8C2D3 !important;
+  background-color: #EAEFF5 !important;
+}
+
+.admin-panel .input:focus,
+.admin-panel .select:focus,
+.admin-panel .textarea:focus {
+  background-color: #FFFFFF !important;
+  border-color: #3563E9 !important;
+  box-shadow: 0 0 0 2px #FFFFFF, 0 0 0 4px rgba(53, 99, 233, 0.3) !important;
+}
+
+.admin-panel label {
+  display: block;
+  color: #323D4E !important; /* High contrast label color */
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  letter-spacing: -0.01em !important;
+  margin-bottom: 6px !important;
+}
+
+/* Badges */
+.admin-panel .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.admin-panel .badge-blue   { background: var(--accent-light); color: var(--accent-text); }
+.admin-panel .badge-green  { background: var(--success-bg);   color: var(--success); }
+.admin-panel .badge-amber  { background: var(--warning-bg);   color: var(--warning); }
+.admin-panel .badge-red    { background: var(--danger-bg);    color: var(--danger); }
+.admin-panel .badge-purple { background: var(--purple-bg);    color: var(--purple); }
+.admin-panel .badge-slate  { background: #F1F5F9;             color: var(--text-secondary); }
+
+/* Filter chips */
+.admin-panel .chip {
+  padding: 5px 13px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 200ms ease;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.admin-panel .chip:hover  { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.admin-panel .chip.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+
+/* Tables */
+.admin-panel .data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.admin-panel .data-table th {
+  padding: 11px 14px;
+  background: var(--bg-elevated);
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.admin-panel .data-table td {
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+
+.admin-panel .data-table tbody tr:hover td {
+  background: var(--bg-hover);
+}
+
+.admin-panel .data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Sidebar nav item */
+.admin-panel .nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 20px !important;
+  font-size: 14px;
+  font-weight: 500 !important;
+  color: #8A94A6 !important;
+  cursor: pointer;
+  transition: background 180ms ease, color 180ms ease;
+  background: transparent !important;
+  border: none;
+  width: 100%;
+  text-align: left;
+  position: relative;
+  text-decoration: none;
+  border-radius: 0 !important;
+  border-right: 3px solid transparent !important;
+}
+
+.admin-panel .nav-item:hover {
+  color: #1A202C !important;
+  background: #F8FAFC !important;
+}
+
+.admin-panel .nav-item.active {
+  color: #3563E9 !important; /* Selected text color */
+  background: #F4F6FA !important; /* Light blue tint bg */
+  font-weight: 600 !important;
+  border-right: 3px solid #3563E9 !important; /* Blue indicator bar on the right */
+}
+
+/* KPI stat card */
+.admin-panel .stat-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+  padding: 20px 22px;
+  transition: box-shadow 200ms ease;
+}
+
+.admin-panel .stat-card:hover { box-shadow: var(--shadow-hover); }
+
+/* Progress bar */
+.admin-panel .progress-track {
+  height: 5px;
+  background: var(--bg-elevated);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.admin-panel .progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+
+/* Empty state */
+.admin-panel .empty-state {
+  text-align: center;
+  padding: 56px 24px;
+  color: var(--text-muted);
+}
+
+.admin-panel .empty-state-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+/* Level color strips */
+.admin-panel .level-a1-bg { background: linear-gradient(135deg,#10B981,#059669); }
+.admin-panel .level-a2-bg { background: linear-gradient(135deg,#3B82F6,#1D4ED8); }
+.admin-panel .level-b1-bg { background: linear-gradient(135deg,#8B5CF6,#6D28D9); }
+.admin-panel .level-b2-bg { background: linear-gradient(135deg,#F59E0B,#D97706); }
+
+/* Stagger helpers */
+.admin-panel .stagger-1  { animation-delay:  0ms; }
+.admin-panel .stagger-2  { animation-delay: 60ms; }
+.admin-panel .stagger-3  { animation-delay:120ms; }
+.admin-panel .stagger-4  { animation-delay:180ms; }

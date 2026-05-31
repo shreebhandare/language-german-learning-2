@@ -238,9 +238,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!user) { setAuthModal('register'); return false; }
     if (couponCode) {
       const co = coupons.find(c => c.code.toUpperCase() === couponCode.toUpperCase() && c.active);
-      if (!co) { toast({ title: 'Invalid coupon code' }); return false; }
-      await db.updateCoupon(co.id, { used: co.used + 1 });
-      setCoupons(prev => prev.map(c => c.id === co.id ? { ...c, used: c.used + 1 } : c));
+      if (!co) { toast({ title: 'Invalid or inactive coupon code' }); return false; }
+      // Reject if usage limit already reached
+      if (co.maxUses !== undefined && co.used >= co.maxUses) {
+        toast({ title: 'Coupon exhausted', description: 'This code has reached its maximum number of uses.' });
+        return false;
+      }
+      const newUsed = co.used + 1;
+      const nowExhausted = co.maxUses !== undefined && newUsed >= co.maxUses;
+      // Increment usage; auto-deactivate if limit now reached
+      const patch = nowExhausted ? { used: newUsed, active: false } : { used: newUsed };
+      await db.updateCoupon(co.id, patch);
+      setCoupons(prev => prev.map(c => c.id === co.id ? { ...c, ...patch } : c));
       toast({ title: `Coupon applied: -${co.discountType === 'percent' ? co.value + '%' : '€' + co.value}` });
     }
     await db.updateProfileTier(user.id, 'paid');
