@@ -46,7 +46,7 @@ interface FormState {
   title: string; level: Level; category: Category; subPart: string;
   type: ExerciseType; access: AccessFlag; mediaUrl: string; transcript: string;
   prompt: string; modelAnswer: string; questions: any[]; guidance: string[];
-  answerDisplayMode: string; allowSkip: boolean;
+  answerDisplayMode: 'instant' | 'end' | 'none'; allowSkip: boolean;
 }
 
 const emptyForm = (): FormState => ({
@@ -176,7 +176,7 @@ const ExercisesAdmin: React.FC = () => {
                 </div>
                 <div>
                   <Label>Answer Display</Label>
-                  <Sel value={form.answerDisplayMode} onChange={e => setForm({ ...form, answerDisplayMode: e.target.value })}>
+                  <Sel value={form.answerDisplayMode} onChange={e => setForm({ ...form, answerDisplayMode: e.target.value as 'instant' | 'end' | 'none' })}>
                     <option value="instant">Show instantly</option>
                     <option value="end">Show at end</option>
                     <option value="none">Don't show</option>
