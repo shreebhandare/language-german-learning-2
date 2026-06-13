@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Mail, Linkedin, Instagram, Facebook, Youtube } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Footer: React.FC = () => {
   const { setView } = useAppContext();
@@ -33,15 +34,28 @@ const Footer: React.FC = () => {
     padding: '2px 0', transition: 'color 180ms ease', textDecoration: 'none',
   };
 
-  const FooterLink: React.FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => (
-    <li>
-      <button style={linkStyle} onClick={onClick}
-        onMouseEnter={e => (e.currentTarget.style.color = '#F1F5F9')}
-        onMouseLeave={e => (e.currentTarget.style.color = '#94A3B8')}>
-        {label}
-      </button>
-    </li>
-  );
+  const FooterLink: React.FC<{ label: string; to?: string; onClick?: () => void }> = ({ label, to, onClick }) => {
+    if (to) {
+      return (
+        <li>
+          <Link to={to} style={linkStyle}
+            onMouseEnter={e => (e.currentTarget.style.color = '#F1F5F9')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#94A3B8')}>
+            {label}
+          </Link>
+        </li>
+      );
+    }
+    return (
+      <li>
+        <button style={linkStyle} onClick={onClick}
+          onMouseEnter={e => (e.currentTarget.style.color = '#F1F5F9')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#94A3B8')}>
+          {label}
+        </button>
+      </li>
+    );
+  };
 
   return (
     <footer style={{ background: '#0F172A', color: '#94A3B8', marginTop: '64px' }}>
@@ -71,10 +85,10 @@ const Footer: React.FC = () => {
           <div>
             <h4 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '13px', color: '#F1F5F9', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Platform</h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <FooterLink label="Practice Quizzes" onClick={() => setView('learn')} />
-              <FooterLink label="Courses"          onClick={() => setView('courses')} />
-              <FooterLink label="Pricing"          onClick={() => setView('pricing')} />
-              <FooterLink label="Dashboard"        onClick={() => setView('dashboard')} />
+              <FooterLink label="Practice Quizzes" to="/learn" />
+              <FooterLink label="Courses"          to="/courses" />
+              <FooterLink label="Pricing"          to="/pricing" />
+              <FooterLink label="Dashboard"        to="/dashboard" />
             </ul>
           </div>
 
@@ -83,7 +97,7 @@ const Footer: React.FC = () => {
             <h4 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '13px', color: '#F1F5F9', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Levels</h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {['A1 Beginner', 'A2 Elementary', 'B1 Intermediate', 'B2 Upper-Intermediate'].map(l => (
-                <FooterLink key={l} label={l} onClick={() => setView('learn')} />
+                <FooterLink key={l} label={l} to="/learn" />
               ))}
             </ul>
           </div>
@@ -92,8 +106,8 @@ const Footer: React.FC = () => {
           <div>
             <h4 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '13px', color: '#F1F5F9', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Company</h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <FooterLink label="About"   onClick={() => setView('about')} />
-              <FooterLink label="Contact" onClick={() => setView('contact')} />
+              <FooterLink label="About"   to="/about" />
+              <FooterLink label="Contact" to="/contact" />
               <FooterLink label="Privacy" onClick={() => toast({ title: 'Privacy Policy' })} />
               <FooterLink label="Terms"   onClick={() => toast({ title: 'Terms of Service' })} />
             </ul>

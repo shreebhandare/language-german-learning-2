@@ -29,6 +29,7 @@ export async function fetchExercises(): Promise<Exercise[]> {
     prompt: r.prompt || undefined,
     guidance: r.guidance || undefined,
     modelAnswer: r.model_answer || undefined,
+    updatedAt: r.updated_at || undefined,
   }));
 }
 
@@ -41,6 +42,7 @@ export async function insertExercise(ex: Exercise): Promise<void> {
     answer_display_mode: ex.answerDisplayMode || 'instant',
     allow_skip: ex.allowSkip !== false,
     prompt: ex.prompt || null, guidance: ex.guidance || null, model_answer: ex.modelAnswer || null,
+    updated_at: new Date().toISOString(),
   });
 }
 
@@ -60,6 +62,7 @@ export async function updateExercise(id: string, ex: Partial<Exercise>): Promise
   if (ex.prompt !== undefined) patch.prompt = ex.prompt || null;
   if (ex.guidance !== undefined) patch.guidance = ex.guidance || null;
   if (ex.modelAnswer !== undefined) patch.model_answer = ex.modelAnswer || null;
+  patch.updated_at = new Date().toISOString();
   await supabase.from('langrushi_exercises').update(patch).eq('id', id);
 }
 
@@ -77,15 +80,21 @@ export async function fetchAllProfiles(): Promise<any[]> {
   }));
 }
 
-export async function findProfileByEmail(email: string): Promise<any | null> {
-  const { data } = await supabase.from('langrushi_profiles').select('*').eq('email', email.toLowerCase()).maybeSingle();
-  return data;
-}
-
-export async function createProfile(p: { id: string; email: string; passwordHash: string; name: string; tier: string; courseLevel?: string }): Promise<void> {
-  await supabase.from('langrushi_profiles').insert({
-    id: p.id, email: p.email.toLowerCase(), password_hash: p.passwordHash, name: p.name, tier: p.tier, course_level: p.courseLevel || null,
-  });
+export async function fetchProfileById(id: string): Promise<any | null> {
+  const { data, error } = await supabase.from('langrushi_profiles').select('*').eq('id', id).maybeSingle();
+  if (error) {
+    console.error('Error fetching profile:', error);
+    return null;
+  }
+  if (!data) return null;
+  return {
+    id: data.id,
+    email: data.email,
+    name: data.name,
+    tier: data.tier,
+    courseLevel: data.course_level || undefined,
+    registeredAt: data.registered_at,
+  };
 }
 
 export async function updateProfileTier(id: string, tier: string, courseLevel?: string): Promise<void> {
@@ -171,7 +180,16 @@ export async function deleteCoupon(id: string): Promise<void> {
 }
 
 // === Settings ===
-export async function fetchSettings(): Promise<{ guestQuota: number; registeredQuota: number; answerDisplayMode: string }> {
+export async function fetchSettings(): Promise<{
+  guestQuota: number;
+  registeredQuota: number;
+  answerDisplayMode: string;
+  priceLifetime: number;
+  priceCourseA1: number;
+  priceCourseA2: number;
+  priceCourseB1: number;
+  priceCourseB2: number;
+}> {
   const { data } = await supabase.from('langrushi_settings').select('*');
   const map: any = {};
   (data || []).forEach((r: any) => { map[r.key] = r.value; });
@@ -179,6 +197,11 @@ export async function fetchSettings(): Promise<{ guestQuota: number; registeredQ
     guestQuota: parseInt(map.guest_quota || '2'),
     registeredQuota: parseInt(map.registered_quota || '10'),
     answerDisplayMode: map.answer_display_mode || 'instant',
+    priceLifetime: parseInt(map.price_lifetime || '49'),
+    priceCourseA1: parseInt(map.price_course_a1 || '199'),
+    priceCourseA2: parseInt(map.price_course_a2 || '249'),
+    priceCourseB1: parseInt(map.price_course_b1 || '299'),
+    priceCourseB2: parseInt(map.price_course_b2 || '349'),
   };
 }
 
@@ -186,22 +209,26 @@ export async function updateSetting(key: string, value: string): Promise<void> {
   await supabase.from('langrushi_settings').upsert({ key, value });
 }
 
-export async function authenticate(email: string, password: string): Promise<any | null> {
-  // Admin bypass for demo
-  if (email.toLowerCase() === 'admin@langrushi.com' && password === 'admin') {
-    return {
-      id: 'admin_demo',
-      email: 'admin@langrushi.com',
-      name: 'Admin Demo',
-      tier: 'admin',
-      registered_at: new Date().toISOString(),
-    };
-  }
+export async function insertAnalytics(visitorId: string, email: string | null, actionType: string, details: string): Promise<void> {
+  const id = 'l_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+  await supabase.from('langrushi_analytics').insert({
+    id,
+    visitor_id: visitorId,
+    user_email: email || null,
+    action_type: actionType,
+    details,
+  });
+}
 
-  const profile = await findProfileByEmail(email);
-  if (!profile) return null;
-  
-  const hash = await hashPassword(password);
-  if (profile.password_hash === hash) return profile;
-  return null;
+export async function fetchAnalytics(): Promise<any[]> {
+  const { data, error } = await supabase.from('langrushi_analytics').select('*').order('created_at', { ascending: false });
+  if (error) { console.error(error); return []; }
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    visitorId: r.visitor_id,
+    userEmail: r.user_email,
+    actionType: r.action_type,
+    details: r.details,
+    createdAt: r.created_at,
+  }));
 }

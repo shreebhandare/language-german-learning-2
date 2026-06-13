@@ -1,6 +1,6 @@
 // Mock data for Langrushi platform
 export type Level = 'A1' | 'A2' | 'B1' | 'B2';
-export type Category = 'Listening' | 'Writing' | 'Grammar' | 'Games';
+export type Category = 'Listening' | 'Writing' | 'Reading' | 'Grammar' | 'Games';
 export type ExerciseType = 'Interactive' | 'Passive';
 export type AccessFlag = 'FREE_ALL' | 'FREE_REGISTERED' | 'PAID';
 export type QuestionType = 'MCQ' | 'FILL_BLANK' | 'TRUE_FALSE';
@@ -33,7 +33,9 @@ export interface Exercise {
   prompt?: string;
   guidance?: string[];
   modelAnswer?: string;
+  updatedAt?: string;
 }
+
 
 export interface ClassCode {
   id: string;
@@ -57,7 +59,7 @@ export interface Coupon {
 }
 
 export const LEVELS: Level[] = ['A1', 'A2', 'B1', 'B2'];
-export const CATEGORIES: Category[] = ['Listening', 'Writing', 'Grammar', 'Games'];
+export const CATEGORIES: Category[] = ['Listening', 'Writing', 'Reading', 'Grammar', 'Games'];
 
 const sampleAudio = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
 
@@ -204,6 +206,38 @@ export const initialExercises: Exercise[] = [
     type: 'Interactive', access: 'FREE_ALL',
     questions: [
       { id: 'q1', text: 'Das Auto _____ repariert werden. (müssen)', type: 'FILL_BLANK', correctAnswer: 'muss' },
+    ],
+  },
+  {
+    id: 'e19', title: 'Ein Tag in Berlin', level: 'A1', category: 'Reading', subPart: 'Teil 1',
+    type: 'Interactive', access: 'FREE_ALL',
+    transcript: 'Hallo, ich heiße David. Ich wohne in Berlin. Berlin ist eine große Stadt in Deutschland. Mein Tag beginnt früh. Um 7 Uhr trinke ich Kaffee und esse Brot. Danach gehe ich im Park spazieren. Am Nachmittag treffe ich meine Freunde im Café. Wir sprechen Deutsch und trinken Tee. Am Abend bleibe ich zu Hause und lese ein Buch. Ich gehe um 22 Uhr ins Bett.',
+    questions: [
+      { id: 'q1', text: 'Wo wohnt David?', type: 'MCQ', options: ['In München', 'In Berlin', 'In Frankfurt', 'In Hamburg'], correctAnswer: 'In Berlin', explanation: 'David sagt: "Ich wohne in Berlin."' },
+      { id: 'q2', text: 'David trinkt am Morgen _____.', type: 'FILL_BLANK', correctAnswer: 'Kaffee', hint: 'Kaffee oder Tee?', explanation: 'David trinkt Kaffee um 7 Uhr.' },
+      { id: 'q3', text: 'David trifft seine Freunde am Vormittag.', type: 'TRUE_FALSE', options: ['True', 'False'], correctAnswer: 'False', explanation: 'Er trifft seine Freunde am Nachmittag.' },
+    ],
+  },
+  {
+    id: 'e20', title: 'Umweltschutz im Alltag', level: 'B1', category: 'Reading', subPart: 'Teil 1',
+    type: 'Interactive', access: 'PAID',
+    transcript: 'Umweltfreundlich zu leben ist in der heutigen Gesellschaft sehr wichtig. Viele Menschen versuchen, Plastikmüll zu vermeiden. Sie kaufen Obst und Gemüse auf dem Markt und benutzen Stofftaschen. Eine weitere einfache Möglichkeit ist das Energiesparen. Man sollte das Licht ausschalten, wenn man einen Raum verlässt, und elektronische Geräte nicht im Standby-Modus lassen. Auch das Fahrrad oder öffentliche Verkehrsmittel zu nutzen, statt mit dem Auto zu fahren, hilft der Umwelt enorm.',
+    questions: [
+      { id: 'q1', text: 'Wo kaufen umweltbewusste Menschen oft ihr Obst und Gemüse?', type: 'MCQ', options: ['Im Supermarkt', 'Auf dem Markt', 'Im Internet', 'Im Kiosk'], correctAnswer: 'Auf dem Markt', explanation: 'Im Text steht: "Sie kaufen Obst und Gemüse auf dem Markt."' },
+      { id: 'q2', text: 'Geräte im Standby-Modus verbrauchen keinen Strom.', type: 'TRUE_FALSE', options: ['True', 'False'], correctAnswer: 'False', explanation: 'Man sollte elektronische Geräte nicht im Standby-Modus lassen, da sie Strom verbrauchen.' },
+      { id: 'q3', text: 'Statt mit dem Auto zu fahren, sollte man das _____ oder öffentliche Verkehrsmittel nutzen.', type: 'FILL_BLANK', correctAnswer: 'Fahrrad', hint: 'Ein zweirädriges Fahrzeug', explanation: 'Der Text empfiehlt, das Fahrrad oder öffentliche Verkehrsmittel zu nutzen.' },
+    ],
+  },
+  {
+    id: 'e21', title: 'Das Brandenburger Tor', level: 'A2', category: 'Reading', subPart: 'Teil 1',
+    type: 'Interactive', access: 'FREE_ALL',
+    transcript: 'Das Brandenburger Tor in Berlin ist eines der bekanntesten historischen Wahrzeichen Deutschlands. Es wurde im 18. Jahrhundert erbaut und diente früher als Stadttor. Während des Kalten Krieges stand es direkt an der Grenze zwischen Ost- und Westberlin und wurde zu einem Symbol der Teilung. Heute steht das Brandenburger Tor für Einheit und Frieden und ist eine der meistbesuchten Sehenswürdigkeiten der Stadt.',
+    questions: [
+      { id: 'q1', text: 'Das Brandenburger Tor wurde im 18. Jahrhundert gebaut.', type: 'TRUE_FALSE', options: ['True', 'False'], correctAnswer: 'True', explanation: 'Der Text sagt: "Es wurde im 18. Jahrhundert erbaut."' },
+      { id: 'q2', text: 'Das Brandenburger Tor liegt in München.', type: 'TRUE_FALSE', options: ['True', 'False'], correctAnswer: 'False', explanation: 'Das Brandenburger Tor liegt in Berlin, nicht in München.' },
+      { id: 'q3', text: 'Es war ein Symbol der Teilung während des Kalten Krieges.', type: 'TRUE_FALSE', options: ['True', 'False'], correctAnswer: 'True', explanation: 'Im Text steht: "wurde zu einem Symbol der Teilung."' },
+      { id: 'q4', text: 'Das Brandenburger Tor wurde ursprünglich als Museum gebaut.', type: 'TRUE_FALSE', options: ['True', 'False'], correctAnswer: 'False', explanation: 'Es diente früher als Stadttor, nicht als Museum.' },
+      { id: 'q5', text: 'Heute steht das Brandenburger Tor für Einheit und Frieden.', type: 'TRUE_FALSE', options: ['True', 'False'], correctAnswer: 'True', explanation: 'Der Text sagt: "Heute steht das Brandenburger Tor für Einheit und Frieden."' },
     ],
   },
 ];

@@ -13,7 +13,7 @@ const ClassCodesAdmin: React.FC = () => {
 
   const add = async () => {
     if (!code.trim()) { toast({ title: 'Code is required' }); return; }
-    await addClassCode({ id: 'cc' + Date.now(), code: code.trim(), level, maxUses, used: 0, active: true });
+    await addClassCode({ id: 'cc' + Date.now(), code: code.trim().toUpperCase(), level, maxUses, used: 0, active: true });
     setCode('');
     toast({ title: 'Class code saved' });
   };

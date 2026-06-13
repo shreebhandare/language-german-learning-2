@@ -95,7 +95,7 @@ const CouponsAdmin: React.FC = () => {
             <Lbl>Type</Lbl>
             <select className="select" value={type} onChange={e => setType(e.target.value as any)}>
               <option value="percent">Percent %</option>
-              <option value="fixed">Fixed €</option>
+              <option value="fixed">Fixed ₹</option>
             </select>
           </div>
 
@@ -189,7 +189,7 @@ const CouponsAdmin: React.FC = () => {
                           fontFamily: 'IBM Plex Mono, monospace',
                           fontWeight: 700, fontSize: '12px',
                         }}>
-                          {c.discountType === 'percent' ? `${c.value}% OFF` : `€${c.value} OFF`}
+                          {c.discountType === 'percent' ? `${c.value}% OFF` : `₹${c.value} OFF`}
                         </span>
                       </td>
                       <td>

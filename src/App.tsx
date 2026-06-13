@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme-provider";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import { AuthCallbackPage } from "./components/langrushi/AuthCallbackPage";
 
 const queryClient = new QueryClient();
 
@@ -22,10 +23,7 @@ const App = () => (
             <Route path="/learn" element={<Index />} />
             <Route path="/dashboard" element={<Index />} />
             <Route path="/admin" element={<Index />} />
-            <Route path="/courses" element={<Index />} />
-            <Route path="/pricing" element={<Index />} />
-            <Route path="/about" element={<Index />} />
-            <Route path="/contact" element={<Index />} />
+            <Route path="/auth/callback" element={<AuthCallbackPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

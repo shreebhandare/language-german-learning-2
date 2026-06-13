@@ -8,9 +8,8 @@ import { ArrowLeft, ArrowRight, CheckCircle2, XCircle, HelpCircle, Lightbulb, He
 interface Props { exercise: Exercise; onClose: () => void; }
 
 const QuizPlayer: React.FC<Props> = ({ exercise, onClose }) => {
-  const { recordAttempt, user, exercises } = useAppContext();
+  const { recordAttempt, user, exercises, answerDisplayMode } = useAppContext();
   
-  const answerDisplayMode = exercise.answerDisplayMode || 'instant';
   const allowSkip = exercise.allowSkip !== false;
 
   const questions = exercise.questions || [];
@@ -198,6 +197,140 @@ const QuizPlayer: React.FC<Props> = ({ exercise, onClose }) => {
     );
   }
 
+  const questionElement = (
+    <div className="w-full">
+      <h2 className="text-xl md:text-2xl font-bold text-center mb-8 leading-relaxed font-serif">
+        {q.text}
+      </h2>
+
+      {/* MCQ */}
+      {q.type === 'MCQ' && (
+        <div className="flex flex-col gap-3">
+          {q.options?.map((opt, i) => {
+            const selected = currentAnswer === opt;
+            const correct = submitted && opt === q.correctAnswer;
+            const wrong = submitted && selected && opt !== q.correctAnswer;
+            
+            let bg = 'bg-white', border = 'border-slate-200', text = 'text-slate-800';
+            if (correct) { bg = 'bg-green-500'; border = 'border-green-500'; text = 'text-white'; }
+            else if (wrong) { bg = 'bg-red-500'; border = 'border-red-500'; text = 'text-white'; }
+            else if (selected) { bg = 'bg-blue-600'; border = 'border-blue-600'; text = 'text-white'; }
+
+            return (
+              <button 
+                key={opt} 
+                onClick={() => !submitted && setAnswers(prev => ({ ...prev, [q.id]: opt }))}
+                disabled={submitted}
+                className={`w-full min-h-[56px] p-4 border rounded-xl flex items-center gap-3 text-left text-base font-medium transition-all ${bg} ${border} ${text} ${!submitted && 'hover:border-blue-400 hover:shadow-sm cursor-pointer'}`}
+              >
+                <span className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold border border-white/30 shrink-0">
+                  {String.fromCharCode(65 + i)}
+                </span>
+                {opt}
+                {submitted && opt === q.correctAnswer && <CheckCircle2 className="w-5 h-5 ml-auto shrink-0" />}
+                {submitted && selected && opt !== q.correctAnswer && <XCircle className="w-5 h-5 ml-auto shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Fill in the Blank */}
+      {q.type === 'FILL_BLANK' && (
+        <div className="w-full">
+          {(q.options && q.options.filter(o => o.trim()).length > 0) ? (
+            <select
+              value={currentAnswer}
+              onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+              disabled={submitted}
+              className={`w-full h-14 px-4 text-center text-lg font-medium rounded-xl border-2 outline-none ${submitted ? (isCorrect() ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50') : 'border-slate-200 focus:border-blue-500'}`}
+            >
+              <option value="" disabled>Select an option...</option>
+              {q.options.filter(o => o.trim()).map((opt, i) => (
+                <option key={i} value={opt}>{opt}</option>
+              ))}
+            </select>
+          ) : (
+            <Input 
+              value={currentAnswer} 
+              onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))} 
+              disabled={submitted} 
+              placeholder="Type your answer..." 
+              className={`h-14 text-center text-lg rounded-xl border-2 ${submitted ? (isCorrect() ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50') : 'border-slate-200 focus-visible:border-blue-500 focus-visible:ring-0'}`} 
+            />
+          )}
+          {submitted && !isCorrect() && (
+            <div className="mt-4 text-center text-green-600 font-medium">
+              Correct answer: <strong className="font-bold">{q.correctAnswer}</strong>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* True / False */}
+      {q.type === 'TRUE_FALSE' && (
+        <div className="grid grid-cols-2 gap-4">
+          {(q.options || ['True', 'False']).map((opt) => {
+            const selected = currentAnswer === opt;
+            const correct = submitted && opt === q.correctAnswer;
+            const wrong = submitted && selected && opt !== q.correctAnswer;
+            
+            let bg = 'bg-white', border = 'border-slate-200', text = 'text-slate-800';
+            if (correct) { bg = 'bg-green-500'; border = 'border-green-500'; text = 'text-white'; }
+            else if (wrong) { bg = 'bg-red-500'; border = 'border-red-500'; text = 'text-white'; }
+            else if (selected) { bg = 'bg-blue-600'; border = 'border-blue-600'; text = 'text-white'; }
+
+            return (
+              <button 
+                key={opt} 
+                onClick={() => !submitted && setAnswers(prev => ({ ...prev, [q.id]: opt }))}
+                disabled={submitted}
+                className={`h-20 border rounded-xl flex flex-col items-center justify-center gap-1.5 text-base font-bold transition-all ${bg} ${border} ${text} ${!submitted && 'hover:border-blue-400 hover:shadow-sm cursor-pointer'}`}
+              >
+                {opt === 'True' ? <Check className="w-6 h-6" /> : <X className="w-6 h-6" />}
+                {opt}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Hint */}
+      {!submitted && q.hint && (
+        <div className="mt-6 text-center">
+          <button onClick={() => setShowHint(!showHint)} className="text-blue-500 hover:underline text-sm font-medium inline-flex items-center gap-1.5">
+            <Lightbulb className="w-4 h-4" /> {showHint ? "Hide Hint" : "Show Hint"}
+          </button>
+          {showHint && (
+            <div className="mt-3 bg-blue-50 text-blue-800 p-3 rounded-lg text-sm text-left animate-in slide-in-from-top-2 duration-200 border border-blue-100">
+              💡 {q.hint}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Feedback after submission */}
+      {submitted && (
+        <div className="mt-8 animate-in slide-in-from-bottom-4 duration-300">
+          <div className={`p-4 rounded-xl mb-4 border flex items-center gap-3 font-semibold ${isCorrect() ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+            {isCorrect() ? <CheckCircle2 className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+            {isCorrect() ? "Correct! Well done!" : "Not quite. Keep going!"}
+          </div>
+          
+          {q.explanation && (
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-2.5">
+              <HelpCircle className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-bold text-blue-700 mb-1">Explanation</p>
+                <p className="text-sm text-slate-700 leading-relaxed">{q.explanation}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Top progress bar */}
@@ -243,179 +376,70 @@ const QuizPlayer: React.FC<Props> = ({ exercise, onClose }) => {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col items-center px-4 py-8 pb-32">
-        <div className="w-full max-w-2xl">
-          {exercise.mediaUrl && (
-            <div className="mb-8 bg-gradient-to-br from-blue-50 to-orange-50 rounded-xl p-4 border border-blue-100">
-              <div className="flex items-center justify-between text-sm font-medium text-black mb-2">
-                <div className="flex items-center gap-2">
-                  <Headphones className="w-4 h-4 text-red-600" /> Listen to the audio for context
-                </div>
-                {exercise.transcript && (
-                  <button
-                    onClick={() => setShowTranscript(prev => !prev)}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-white/80 hover:bg-white border border-blue-200 rounded-lg px-3 py-1.5 transition-all"
-                  >
-                    <FileText className="w-3.5 h-3.5" />
-                    {showTranscript ? 'Hide Transcript' : 'Show Transcript'}
-                  </button>
-                )}
-              </div>
-              <audio controls className="w-full" src={exercise.mediaUrl} />
+        {exercise.category === 'Reading' && exercise.transcript ? (
+          <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+            {/* Reading Passage Column */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 md:sticky md:top-20 max-h-[70vh] overflow-y-auto shadow-sm">
+              <h3 className="text-lg font-bold font-serif mb-4 flex items-center gap-2 text-slate-800 border-b pb-3">
+                <FileText className="w-5 h-5 text-blue-600" /> Lesetext (Reading Passage)
+              </h3>
+              <p className="text-base text-slate-700 leading-relaxed whitespace-pre-line font-serif">
+                {exercise.transcript}
+              </p>
             </div>
-          )}
-
-          {/* Transcript Sidebar */}
-          {exercise.transcript && (
-            <div
-              className={`fixed top-0 right-0 h-full w-[340px] z-50 bg-white/95 backdrop-blur-xl border-l border-slate-200 shadow-2xl transform transition-transform duration-300 ease-in-out ${showTranscript ? 'translate-x-0' : 'translate-x-full'}`}
-            >
-              <div className="flex items-center justify-between p-4 border-b border-slate-100">
-                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-blue-600" /> Transcript
-                </h3>
-                <button
-                  onClick={() => setShowTranscript(false)}
-                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500 hover:text-slate-800"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="p-5 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 64px)' }}>
-                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{exercise.transcript}</p>
-              </div>
-            </div>
-          )}
-
-          <h2 className="text-xl md:text-2xl font-bold text-center mb-8 leading-relaxed font-serif">
-            {q.text}
-          </h2>
-
-          {/* MCQ */}
-          {q.type === 'MCQ' && (
-            <div className="flex flex-col gap-3">
-              {q.options?.map((opt, i) => {
-                const selected = currentAnswer === opt;
-                const correct = submitted && opt === q.correctAnswer;
-                const wrong = submitted && selected && opt !== q.correctAnswer;
-                
-                let bg = 'bg-white', border = 'border-slate-200', text = 'text-slate-800';
-                if (correct) { bg = 'bg-green-500'; border = 'border-green-500'; text = 'text-white'; }
-                else if (wrong) { bg = 'bg-red-500'; border = 'border-red-500'; text = 'text-white'; }
-                else if (selected) { bg = 'bg-blue-600'; border = 'border-blue-600'; text = 'text-white'; }
-
-                return (
-                  <button 
-                    key={opt} 
-                    onClick={() => !submitted && setAnswers(prev => ({ ...prev, [q.id]: opt }))}
-                    disabled={submitted}
-                    className={`w-full min-h-[56px] p-4 border rounded-xl flex items-center gap-3 text-left text-base font-medium transition-all ${bg} ${border} ${text} ${!submitted && 'hover:border-blue-400 hover:shadow-sm cursor-pointer'}`}
-                  >
-                    <span className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold border border-white/30 shrink-0">
-                      {String.fromCharCode(65 + i)}
-                    </span>
-                    {opt}
-                    {submitted && opt === q.correctAnswer && <CheckCircle2 className="w-5 h-5 ml-auto shrink-0" />}
-                    {submitted && selected && opt !== q.correctAnswer && <XCircle className="w-5 h-5 ml-auto shrink-0" />}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Fill in the Blank */}
-          {q.type === 'FILL_BLANK' && (
+            
+            {/* Questions Column */}
             <div className="w-full">
-              {(q.options && q.options.filter(o => o.trim()).length > 0) ? (
-                <select
-                  value={currentAnswer}
-                  onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
-                  disabled={submitted}
-                  className={`w-full h-14 px-4 text-center text-lg font-medium rounded-xl border-2 outline-none ${submitted ? (isCorrect() ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50') : 'border-slate-200 focus:border-blue-500'}`}
-                >
-                  <option value="" disabled>Select an option...</option>
-                  {q.options.filter(o => o.trim()).map((opt, i) => (
-                    <option key={i} value={opt}>{opt}</option>
-                  ))}
-                </select>
-              ) : (
-                <Input 
-                  value={currentAnswer} 
-                  onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))} 
-                  disabled={submitted} 
-                  placeholder="Type your answer..." 
-                  className={`h-14 text-center text-lg rounded-xl border-2 ${submitted ? (isCorrect() ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50') : 'border-slate-200 focus-visible:border-blue-500 focus-visible:ring-0'}`} 
-                />
-              )}
-              {submitted && !isCorrect() && (
-                <div className="mt-4 text-center text-green-600 font-medium">
-                  Correct answer: <strong className="font-bold">{q.correctAnswer}</strong>
-                </div>
-              )}
+              {questionElement}
             </div>
-          )}
-
-          {/* True / False */}
-          {q.type === 'TRUE_FALSE' && (
-            <div className="grid grid-cols-2 gap-4">
-              {(q.options || ['True', 'False']).map((opt) => {
-                const selected = currentAnswer === opt;
-                const correct = submitted && opt === q.correctAnswer;
-                const wrong = submitted && selected && opt !== q.correctAnswer;
-                
-                let bg = 'bg-white', border = 'border-slate-200', text = 'text-slate-800';
-                if (correct) { bg = 'bg-green-500'; border = 'border-green-500'; text = 'text-white'; }
-                else if (wrong) { bg = 'bg-red-500'; border = 'border-red-500'; text = 'text-white'; }
-                else if (selected) { bg = 'bg-blue-600'; border = 'border-blue-600'; text = 'text-white'; }
-
-                return (
-                  <button 
-                    key={opt} 
-                    onClick={() => !submitted && setAnswers(prev => ({ ...prev, [q.id]: opt }))}
-                    disabled={submitted}
-                    className={`h-20 border rounded-xl flex flex-col items-center justify-center gap-1.5 text-base font-bold transition-all ${bg} ${border} ${text} ${!submitted && 'hover:border-blue-400 hover:shadow-sm cursor-pointer'}`}
-                  >
-                    {opt === 'True' ? <Check className="w-6 h-6" /> : <X className="w-6 h-6" />}
-                    {opt}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Hint */}
-          {!submitted && q.hint && (
-            <div className="mt-6 text-center">
-              <button onClick={() => setShowHint(!showHint)} className="text-blue-500 hover:underline text-sm font-medium inline-flex items-center gap-1.5">
-                <Lightbulb className="w-4 h-4" /> {showHint ? "Hide Hint" : "Show Hint"}
-              </button>
-              {showHint && (
-                <div className="mt-3 bg-blue-50 text-blue-800 p-3 rounded-lg text-sm text-left animate-in slide-in-from-top-2 duration-200 border border-blue-100">
-                  💡 {q.hint}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Feedback after submission */}
-          {submitted && (
-            <div className="mt-8 animate-in slide-in-from-bottom-4 duration-300">
-              <div className={`p-4 rounded-xl mb-4 border flex items-center gap-3 font-semibold ${isCorrect() ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
-                {isCorrect() ? <CheckCircle2 className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
-                {isCorrect() ? "Correct! Well done!" : "Not quite. Keep going!"}
-              </div>
-              
-              {q.explanation && (
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-2.5">
-                  <HelpCircle className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-bold text-blue-700 mb-1">Explanation</p>
-                    <p className="text-sm text-slate-700 leading-relaxed">{q.explanation}</p>
+          </div>
+        ) : (
+          <div className="w-full max-w-2xl">
+            {exercise.mediaUrl && (
+              <div className="mb-8 bg-gradient-to-br from-blue-50 to-orange-50 rounded-xl p-4 border border-blue-100">
+                <div className="flex items-center justify-between text-sm font-medium text-black mb-2">
+                  <div className="flex items-center gap-2">
+                    <Headphones className="w-4 h-4 text-red-600" /> Listen to the audio for context
                   </div>
+                  {exercise.transcript && (
+                    <button
+                      onClick={() => setShowTranscript(prev => !prev)}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-white/80 hover:bg-white border border-blue-200 rounded-lg px-3 py-1.5 transition-all"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      {showTranscript ? 'Hide Transcript' : 'Show Transcript'}
+                    </button>
+                  )}
                 </div>
-              )}
-            </div>
-          )}
-        </div>
+                <audio controls className="w-full" src={exercise.mediaUrl} />
+              </div>
+            )}
+
+            {/* Transcript Sidebar */}
+            {exercise.transcript && (
+              <div
+                className={`fixed top-0 right-0 h-full w-[340px] z-50 bg-white/95 backdrop-blur-xl border-l border-slate-200 shadow-2xl transform transition-transform duration-300 ease-in-out ${showTranscript ? 'translate-x-0' : 'translate-x-full'}`}
+              >
+                <div className="flex items-center justify-between p-4 border-b border-slate-100">
+                  <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-blue-600" /> Transcript
+                  </h3>
+                  <button
+                    onClick={() => setShowTranscript(false)}
+                    className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500 hover:text-slate-800"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="p-5 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 64px)' }}>
+                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{exercise.transcript}</p>
+                </div>
+              </div>
+            )}
+
+            {questionElement}
+          </div>
+        )}
       </div>
 
       {/* Bottom submit bar */}
@@ -447,7 +471,7 @@ const QuizPlayer: React.FC<Props> = ({ exercise, onClose }) => {
 };
 
 const PassiveExercise: React.FC<{ exercise: Exercise; onClose: () => void; isCourseMatch: boolean }> = ({ exercise, onClose, isCourseMatch }) => {
-  const { recordAttempt, exercises } = useAppContext();
+  const { recordAttempt, exercises, setActiveExerciseId } = useAppContext();
   useEffect(() => { recordAttempt(exercise.id, 1, 1); }, [recordAttempt, exercise.id]);
 
   const sameCategoryEx = exercises.filter(e => e.category === exercise.category && e.level === exercise.level);
@@ -500,10 +524,10 @@ const PassiveExercise: React.FC<{ exercise: Exercise; onClose: () => void; isCou
           </div>
 
           <div className="mt-10 pt-6 border-t border-slate-100 flex justify-between gap-3">
-            <Button variant="outline" disabled={!prev} onClick={() => prev && onClose()}>
+            <Button variant="outline" disabled={!prev} onClick={() => prev && setActiveExerciseId(prev.id)}>
               <ArrowLeft className="w-4 h-4 mr-2" /> Back
             </Button>
-            <Button className="bg-[#0a192f] hover:bg-[#020c1b]" disabled={!next} onClick={() => next && onClose()}>
+            <Button className="bg-[#0a192f] hover:bg-[#020c1b]" disabled={!next} onClick={() => next && setActiveExerciseId(next.id)}>
               Next <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>

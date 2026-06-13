@@ -7,12 +7,12 @@ import { toast } from '@/components/ui/use-toast';
 import { ArrowRight, Check, Mail, MapPin, Phone, Star, GraduationCap } from 'lucide-react';
 
 export const CoursesPage: React.FC = () => {
-  const { setView, setAuthModal, user } = useAppContext();
+  const { setView, setAuthModal, user, priceLifetime, priceCourseA1, priceCourseA2, priceCourseB1, priceCourseB2 } = useAppContext();
   const courses = [
-    { level: 'A1', title: 'German A1 — Beginner', desc: 'Build a solid foundation. Greetings, numbers, basic conversations.', weeks: 8, price: 199, color: 'emerald' },
-    { level: 'A2', title: 'German A2 — Elementary', desc: 'Daily life, shopping, travel. Express opinions and preferences.', weeks: 10, price: 249, color: 'blue' },
-    { level: 'B1', title: 'German B1 — Intermediate', desc: 'Discuss complex topics, work language, formal writing.', weeks: 12, price: 299, color: 'purple' },
-    { level: 'B2', title: 'German B2 — Upper-Int.', desc: 'Argumentation, abstract themes, near-fluent comprehension.', weeks: 14, price: 349, color: 'orange' },
+    { level: 'A1', title: 'German A1 — Beginner', desc: 'Build a solid foundation. Greetings, numbers, basic conversations.', weeks: 8, price: priceCourseA1, color: 'emerald' },
+    { level: 'A2', title: 'German A2 — Elementary', desc: 'Daily life, shopping, travel. Express opinions and preferences.', weeks: 10, price: priceCourseA2, color: 'blue' },
+    { level: 'B1', title: 'German B1 — Intermediate', desc: 'Discuss complex topics, work language, formal writing.', weeks: 12, price: priceCourseB1, color: 'purple' },
+    { level: 'B2', title: 'German B2 — Upper-Int.', desc: 'Argumentation, abstract themes, near-fluent comprehension.', weeks: 14, price: priceCourseB2, color: 'orange' },
   ];
 
   return (
@@ -37,7 +37,7 @@ export const CoursesPage: React.FC = () => {
                 <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-600" /> Small group (max 12)</li>
                 <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-600" /> Goethe exam prep</li>
               </ul>
-              <div className="text-2xl font-bold text-black mb-3">€{c.price}</div>
+              <div className="text-2xl font-bold text-black mb-3">₹{c.price}</div>
               <Button className="w-full bg-[#0a192f] hover:bg-[#020c1b]" onClick={() => {
                 if (!user) setAuthModal('register');
                 else { toast({ title: 'Enrollment processing...', description: 'You will be redirected to checkout.' }); setTimeout(() => setView('dashboard'), 1500); }
@@ -52,7 +52,7 @@ export const CoursesPage: React.FC = () => {
       <div className="mt-16 bg-gradient-to-r from-blue-50 to-orange-50 rounded-2xl p-8 text-center border border-blue-100">
         <GraduationCap className="w-10 h-10 mx-auto text-red-600 mb-3" />
         <h2 className="text-2xl font-bold text-black">Just want quizzes?</h2>
-        <p className="mt-2 text-black">Get lifetime access to the full quiz library for a one-time payment of €49.</p>
+        <p className="mt-2 text-black">Get lifetime access to the full quiz library for a one-time payment of ₹{priceLifetime}.</p>
         <Button className="mt-4 bg-[#0a192f] hover:bg-[#020c1b]" onClick={() => setView('pricing')}>See quiz pricing</Button>
       </div>
     </div>
@@ -60,7 +60,7 @@ export const CoursesPage: React.FC = () => {
 };
 
 export const PricingPage: React.FC = () => {
-  const { upgradeToPaid, user, setAuthModal } = useAppContext();
+  const { upgradeToPaid, user, setAuthModal, priceLifetime, guestQuota, registeredQuota } = useAppContext();
   const [coupon, setCoupon] = useState('');
 
   return (
@@ -71,16 +71,16 @@ export const PricingPage: React.FC = () => {
       </div>
 
       <div className="grid md:grid-cols-3 gap-6">
-        <PricingCard tier="Guest" price="€0" subtitle="No login required" features={['Grammar (always free)', 'Games (always free)', '2 free quiz attempts', 'Basic UI']} cta="Try free" onCta={() => setAuthModal('register')} />
+        <PricingCard tier="Guest" price="₹0" subtitle="No login required" features={['Grammar (always free)', 'Games (always free)', `${guestQuota} free quiz attempts`, 'Basic UI']} cta="Try free" onCta={() => setAuthModal('register')} />
 
-        <PricingCard tier="Registered" price="€0" subtitle="Free account" features={['Everything in Guest', '10 free quiz attempts', 'Save your progress', 'Email support']} cta="Sign up free" onCta={() => setAuthModal('register')} highlighted={false} />
+        <PricingCard tier="Registered" price="₹0" subtitle="Free account" features={['Everything in Guest', `${registeredQuota} free quiz attempts`, 'Save your progress', 'Email support']} cta="Sign up free" onCta={() => setAuthModal('register')} highlighted={false} />
 
         <div className="bg-gradient-to-br from-[#1D4ED8] to-[#EA580C] rounded-2xl p-6 text-white relative shadow-2xl">
           <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-yellow-400 text-black text-xs font-bold px-3 py-1 rounded-full">BEST VALUE</span>
           <div className="text-sm font-semibold opacity-90">Lifetime</div>
           <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-4xl font-bold">€49</span>
-            <span className="text-blue-100 line-through">€99</span>
+            <span className="text-4xl font-bold">₹{priceLifetime}</span>
+            <span className="text-blue-100 line-through">₹{Math.round(priceLifetime * 2)}</span>
           </div>
           <div className="text-xs mt-1">One-time · 50% off</div>
           <ul className="mt-5 space-y-2 text-sm">

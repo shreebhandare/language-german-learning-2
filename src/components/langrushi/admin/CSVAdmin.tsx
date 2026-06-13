@@ -7,18 +7,40 @@ import CollapsibleCard from './CollapsibleCard';
 
 interface ParsedExercise {
   id: string; title: string; level: string; category: string; subPart: string;
-  type: string; access: string; mediaUrl: string;
+  type: string; access: string; mediaUrl: string; transcript: string;
+  guidance: string; modelAnswer: string;
   questions: { text: string; type: string; correctAnswer: string; options: string[]; hint: string; explanation: string }[];
   errors: string[]; valid: boolean;
 }
 
+function escapeCSVField(field: any): string {
+  if (field === null || field === undefined) return '';
+  const str = String(field);
+  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
 function parseCSVLine(line: string): string[] {
-  const result: string[] = []; let current = ''; let inQuotes = false;
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
-    if (ch === '"') { inQuotes = !inQuotes; continue; }
-    if (ch === ',' && !inQuotes) { result.push(current.trim()); current = ''; continue; }
-    current += ch;
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++; // Skip the second quote
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
   }
   result.push(current.trim());
   return result;
@@ -39,8 +61,13 @@ function parseCSV(text: string): ParsedExercise[] {
     const opt3 = cols[10] || ''; const opt4 = cols[11] || '';
     const mediaUrl = cols[12] || ''; const hint = cols[13] || '';
     const explanation = cols[14] || ''; const access = cols[15] || 'FREE_ALL';
-    if (cols.length < 8) rowErrors.push(`Row ${rowNum}: Not enough columns (${cols.length}/16)`);
+    const transcript = cols[16] || '';
+    const guidance = cols[17] || '';
+    const modelAnswer = cols[18] || '';
+
+    if (cols.length < 8) rowErrors.push(`Row ${rowNum}: Not enough columns (${cols.length}/19)`);
     if (!LEVELS.includes(level as any)) rowErrors.push(`Row ${rowNum}: Invalid level "${level}"`);
+    if (!['Listening', 'Writing', 'Reading', 'Grammar', 'Games'].includes(category)) rowErrors.push(`Row ${rowNum}: Invalid category "${category}"`);
     if (!title) rowErrors.push(`Row ${rowNum}: Missing exercise title`);
     if (exType === 'Interactive') {
       if (!qText) rowErrors.push(`Row ${rowNum}: Missing question text`);
@@ -48,12 +75,22 @@ function parseCSV(text: string): ParsedExercise[] {
       if (qType === 'MCQ' && !opt1 && !opt2) rowErrors.push(`Row ${rowNum}: MCQ needs at least 2 options`);
       if (!['MCQ', 'FILL_BLANK', 'TRUE_FALSE'].includes(qType)) rowErrors.push(`Row ${rowNum}: Invalid question type "${qType}"`);
     }
+
     const key = `${level}|${category}|${title}`;
-    if (!map.has(key)) map.set(key, { id: 'e' + Date.now() + Math.random().toString(36).slice(2, 6), title, level, category, subPart, type: exType, access, mediaUrl, questions: [], errors: [], valid: true });
+    if (!map.has(key)) {
+      map.set(key, {
+        id: 'e' + Date.now() + Math.random().toString(36).slice(2, 6),
+        title, level, category, subPart, type: exType, access, mediaUrl,
+        transcript, guidance, modelAnswer,
+        questions: [], errors: [], valid: true
+      });
+    }
     const ex = map.get(key)!;
     ex.errors.push(...rowErrors);
     if (rowErrors.length > 0) ex.valid = false;
-    if (exType === 'Interactive' && qText) ex.questions.push({ text: qText, type: qType, correctAnswer, options: [opt1, opt2, opt3, opt4].filter(Boolean), hint, explanation });
+    if (exType === 'Interactive' && qText) {
+      ex.questions.push({ text: qText, type: qType, correctAnswer, options: [opt1, opt2, opt3, opt4].filter(Boolean), hint, explanation });
+    }
   });
   return Array.from(map.values());
 }
@@ -66,12 +103,15 @@ const CSVAdmin: React.FC = () => {
   const [excluded, setExcluded] = useState<Set<number>>(new Set());
 
   const exportCSV = () => {
-    const header = 'level,category,sub_part,exercise_title,exercise_type,question_text,question_type,correct_answer,option1,option2,option3,option4,media_url,hint,explanation,access_flag\n';
+    const header = 'level,category,sub_part,exercise_title,exercise_type,question_text,question_type,correct_answer,option1,option2,option3,option4,media_url,hint,explanation,access_flag,transcript,guidance,model_answer\n';
     const rows = exercises.flatMap(e => {
-      if (e.type === 'Passive') return [`${e.level},${e.category},${e.subPart},"${e.title}",Passive,"${e.prompt || ''}",,,,,,,,,,${e.access}`];
+      const guidanceStr = e.guidance ? JSON.stringify(e.guidance) : '';
+      if (e.type === 'Passive') {
+        return [`${escapeCSVField(e.level)},${escapeCSVField(e.category)},${escapeCSVField(e.subPart)},${escapeCSVField(e.title)},Passive,${escapeCSVField(e.prompt || '')},,,,,,,,,,${escapeCSVField(e.access)},${escapeCSVField(e.transcript || '')},${escapeCSVField(guidanceStr)},${escapeCSVField(e.modelAnswer || '')}`];
+      }
       return (e.questions || []).map(q => {
         const opts = q.options || ['', '', '', ''];
-        return `${e.level},${e.category},${e.subPart},"${e.title}",Interactive,"${q.text}",${q.type},"${q.correctAnswer}","${opts[0]||''}","${opts[1]||''}","${opts[2]||''}","${opts[3]||''}","${e.mediaUrl||''}","${q.hint||''}","${q.explanation||''}",${e.access}`;
+        return `${escapeCSVField(e.level)},${escapeCSVField(e.category)},${escapeCSVField(e.subPart)},${escapeCSVField(e.title)},Interactive,${escapeCSVField(q.text)},${escapeCSVField(q.type)},${escapeCSVField(q.correctAnswer)},${escapeCSVField(opts[0] || '')},${escapeCSVField(opts[1] || '')},${escapeCSVField(opts[2] || '')},${escapeCSVField(opts[3] || '')},${escapeCSVField(e.mediaUrl || '')},${escapeCSVField(q.hint || '')},${escapeCSVField(q.explanation || '')},${escapeCSVField(e.access)},${escapeCSVField(e.transcript || '')},${escapeCSVField(guidanceStr)},${escapeCSVField(e.modelAnswer || '')}`;
       });
     });
     const blob = new Blob([header + rows.join('\n')], { type: 'text/csv' });
@@ -104,6 +144,17 @@ const CSVAdmin: React.FC = () => {
           id: ex.id, title: ex.title, level: ex.level as Level, category: ex.category as any,
           subPart: ex.subPart, type: ex.type as any, access: (ex.access || 'FREE_ALL') as AccessFlag,
           mediaUrl: ex.mediaUrl || undefined,
+          transcript: ex.transcript || undefined,
+          prompt: ex.type === 'Passive' ? ex.questions[0]?.text || undefined : undefined,
+          guidance: (() => {
+            if (!ex.guidance) return undefined;
+            try {
+              return JSON.parse(ex.guidance);
+            } catch (e) {
+              return ex.guidance.split(',').map(s => s.trim());
+            }
+          })(),
+          modelAnswer: ex.modelAnswer || undefined,
           questions: ex.type === 'Interactive' ? ex.questions.map((q, qi) => ({
             id: `${ex.id}_q${qi}`, text: q.text, type: q.type as any, correctAnswer: q.correctAnswer,
             options: q.type === 'MCQ' ? q.options : undefined,
@@ -151,14 +202,44 @@ const CSVAdmin: React.FC = () => {
 
       {/* Schema */}
       <CollapsibleCard label="CSV Schema" defaultCollapsed>
-        <div style={{ padding: '12px 16px', borderRadius: '9px', background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
-          <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '11px', color: 'var(--text-secondary)', wordBreak: 'break-all' }}>
-            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Schema: </span>
-            level, category, sub_part, exercise_title, exercise_type, question_text, question_type, correct_answer, option1, option2, option3, option4, media_url, hint, explanation, access_flag
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ padding: '12px 16px', borderRadius: '9px', background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
+            <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '11px', color: 'var(--text-secondary)', wordBreak: 'break-all', lineHeight: 1.8 }}>
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>19 Columns: </span>
+              level, category, sub_part, exercise_title, exercise_type, question_text, question_type, correct_answer, option1, option2, option3, option4, media_url, hint, explanation, access_flag, <span style={{ color: 'var(--accent-text)', fontWeight: 600 }}>transcript, guidance, model_answer</span>
+            </div>
+            <p style={{ fontFamily: 'Figtree, sans-serif', fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px', marginBottom: 0 }}>
+              Rows sharing the same level + category + title are grouped into one exercise with multiple questions.
+            </p>
           </div>
-          <p style={{ fontFamily: 'Figtree, sans-serif', fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px', marginBottom: 0 }}>
-            Rows sharing the same level + category + title are grouped into one exercise with multiple questions.
-          </p>
+
+          {/* Per-category notes */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '8px' }}>
+            {[
+              { cat: 'Listening', type: 'Interactive', fields: 'media_url (audio), transcript (optional), MCQ / FILL_BLANK / TRUE_FALSE questions' },
+              { cat: 'Reading',   type: 'Interactive', fields: 'transcript (reading passage text), MCQ / FILL_BLANK / TRUE_FALSE questions' },
+              { cat: 'Writing',   type: 'Passive',     fields: 'question_text = prompt, guidance (comma-separated bullets), model_answer' },
+              { cat: 'Grammar',   type: 'Interactive', fields: 'MCQ / FILL_BLANK / TRUE_FALSE questions. No media or transcript needed.' },
+              { cat: 'Games',     type: 'Interactive', fields: 'MCQ / FILL_BLANK questions. No media or transcript needed.' },
+            ].map(n => (
+              <div key={n.cat} style={{ padding: '10px 12px', borderRadius: '8px', background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                  <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '12px', color: 'var(--text-primary)' }}>{n.cat}</span>
+                  <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '9px', padding: '1px 6px', borderRadius: '999px', background: 'var(--accent-light)', color: 'var(--accent-text)' }}>{n.type}</span>
+                </div>
+                <p style={{ fontFamily: 'Figtree, sans-serif', fontSize: '11px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>{n.fields}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Valid values */}
+          <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-surface)', border: '1px solid var(--border)', fontFamily: 'IBM Plex Mono, monospace', fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.8 }}>
+            <div><span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>level: </span>A1 | A2 | B1 | B2</div>
+            <div><span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>category: </span>Listening | Reading | Writing | Grammar | Games</div>
+            <div><span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>exercise_type: </span>Interactive | Passive</div>
+            <div><span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>question_type: </span>MCQ | FILL_BLANK | TRUE_FALSE</div>
+            <div><span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>access_flag: </span>FREE_ALL | FREE_REGISTERED | PAID</div>
+          </div>
         </div>
       </CollapsibleCard>
 

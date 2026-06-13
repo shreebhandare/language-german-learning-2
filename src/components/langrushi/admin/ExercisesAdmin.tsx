@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { LEVELS, CATEGORIES, Level, Category, AccessFlag, ExerciseType, Exercise } from '@/lib/langrushi-data';
 import { toast } from '@/components/ui/use-toast';
-import { Plus, Trash2, Edit2, X, Save, Search } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Save, Search, Clock } from 'lucide-react';
 import CollapsibleCard from './CollapsibleCard';
 
 /* ── Form primitives ─────────────────────────── */
@@ -183,8 +183,8 @@ const ExercisesAdmin: React.FC = () => {
                   </Sel>
                 </div>
                 <div className="md:col-span-2">
-                  <Label optional>Transcript (shown as sidebar during exercise)</Label>
-                  <Txt rows={3} value={form.transcript} onChange={e => setForm({ ...form, transcript: e.target.value })} placeholder="Paste the audio transcript here..." />
+                  <Label optional>{form.category === 'Reading' ? 'Reading Passage' : 'Transcript (shown as sidebar during exercise)'}</Label>
+                  <Txt rows={4} value={form.transcript} onChange={e => setForm({ ...form, transcript: e.target.value })} placeholder={form.category === 'Reading' ? 'Enter the reading passage paragraph...' : 'Paste the audio transcript here...'} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <input type="checkbox" id="allowSkip" checked={form.allowSkip} onChange={e => setForm({ ...form, allowSkip: e.target.checked })}
@@ -352,12 +352,13 @@ const ExercisesAdmin: React.FC = () => {
         <table className="data-table">
           <thead>
             <tr>
-              <th style={{ width: '35%' }}>Title</th>
+              <th style={{ width: '32%' }}>Title</th>
               <th>Level</th>
               <th>Category</th>
               <th>Type</th>
               <th style={{ textAlign: 'center' }}>Questions</th>
               <th>Access</th>
+              <th>Last Updated</th>
               <th style={{ textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
@@ -367,7 +368,7 @@ const ExercisesAdmin: React.FC = () => {
               Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={7}>
+                <td colSpan={8}>
                   <div className="empty-state">
                     <div className="empty-state-icon"><Search className="w-5 h-5" style={{ color: 'var(--text-muted)' }} /></div>
                     <p style={{ fontFamily: 'Figtree, sans-serif', fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)', margin: '0 0 4px' }}>No exercises found</p>
@@ -389,6 +390,14 @@ const ExercisesAdmin: React.FC = () => {
                   {e.type === 'Interactive' ? (e.questions?.length || 0) : '—'}
                 </td>
                 <td><AccessBadge access={e.access} /></td>
+                <td style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                  {e.updatedAt ? (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Clock className="w-3 h-3" style={{ flexShrink: 0 }} />
+                      {new Date(e.updatedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </span>
+                  ) : '—'}
+                </td>
                 <td style={{ textAlign: 'right' }}>
                   <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                     <button

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 interface CollapsibleCardProps {
+  /** Optional key for identifying the card */
+  cardKey?: string;
   /** Header label (shown in monospace caps) */
   label: string;
   /** Optional badge/node shown next to the label */

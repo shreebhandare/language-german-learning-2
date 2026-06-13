@@ -154,7 +154,7 @@ const UsersAdmin: React.FC = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {bot3.length === 0
                   ? <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)', fontSize: '13px' }}>Not enough data yet.</div>
-                  : bot3.map((u, i) => <LeaderRow key={u.id} u={u} rank={ranked.length - 2 + i} good={false} />)
+                  : bot3.map((u, i) => <LeaderRow key={u.id} u={u} rank={ranked.findIndex(r => r.id === u.id) + 1} good={false} />)
                 }
               </div>
             </div>

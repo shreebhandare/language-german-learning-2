@@ -3,11 +3,11 @@ import { useAppContext } from '@/contexts/AppContext';
 import { LEVELS, CATEGORIES, Level, Category, Exercise } from '@/lib/langrushi-data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Lock, Headphones, PenTool, BookOpen, Gamepad2, Bell, CheckCircle2, Play } from 'lucide-react';
+import { Search, Lock, Headphones, PenTool, BookOpen, Gamepad2, Bell, CheckCircle2, Play, Book } from 'lucide-react';
 import QuizPlayer from './QuizPlayer';
 
 const categoryIcons: Record<Category, any> = {
-  Listening: Headphones, Writing: PenTool, Grammar: BookOpen, Games: Gamepad2,
+  Listening: Headphones, Writing: PenTool, Reading: Book, Grammar: BookOpen, Games: Gamepad2,
 };
 
 const LearnPage: React.FC = () => {
@@ -45,9 +45,22 @@ const LearnPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl md:text-4xl font-bold text-black">Quiz Library</h1>
-        <p className="mt-2 text-black">Practice German at your level. Grammar and Games are always free.</p>
+      <div className="relative rounded-3xl overflow-hidden mb-10 bg-gradient-to-r from-[#0f172a] to-[#1e293b] text-white p-8 md:p-12 shadow-xl border border-slate-800">
+        {/* Subtle background abstract shapes/glow */}
+        <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/10 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 w-60 h-60 bg-red-600/5 rounded-full blur-[60px] pointer-events-none" />
+        
+        <div className="relative max-w-2xl">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-300 border border-blue-500/20 uppercase tracking-wider mb-4">
+            🇩🇪 Willkommen bei Langrushi
+          </span>
+          <h1 className="text-4xl md:text-5xl font-black font-serif tracking-tight leading-tight mb-4 text-white">
+            Master German through <span className="bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">interactive practice</span>.
+          </h1>
+          <p className="text-slate-300 text-lg leading-relaxed max-w-xl">
+            Practice native-quality exercises from A1 to B2. Improve your grammar, writing, listening, and reading skills with instant feedback.
+          </p>
+        </div>
       </div>
 
       {/* Filters */}

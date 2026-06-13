@@ -1,15 +1,12 @@
 import React, { useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import Header from './langrushi/Header';
-import Footer from './langrushi/Footer';
-import MarketingPage from './langrushi/MarketingPage';
 import LearnPage from './langrushi/LearnPage';
 import Dashboard from './langrushi/Dashboard';
 import AdminPanel from './langrushi/admin';
 import AuthModal from './langrushi/AuthModal';
 import ForcedUpgradeModal from './langrushi/ForcedUpgradeModal';
 import CookieBanner from './langrushi/CookieBanner';
-import { CoursesPage, PricingPage, AboutPage, ContactPage } from './langrushi/SimplePages';
 
 const AppLayout: React.FC = () => {
   const { view, loading, activeExerciseId } = useAppContext();
@@ -27,19 +24,14 @@ const AppLayout: React.FC = () => {
 
   const renderView = () => {
     switch (view) {
-      case 'marketing': return <MarketingPage />;
       case 'learn':     return <LearnPage />;
       case 'dashboard': return <Dashboard />;
       case 'admin':     return <AdminPanel />;
-      case 'courses':   return <CoursesPage />;
-      case 'pricing':   return <PricingPage />;
-      case 'about':     return <AboutPage />;
-      case 'contact':   return <ContactPage />;
-      default:          return <MarketingPage />;
+      default:          return <LearnPage />;
     }
   };
 
-  const showHeaderFooter = !isQuizMode && view !== 'admin';
+  const showHeader = !isQuizMode && view !== 'admin' && view !== 'dashboard';
 
   if (loading) {
     return (
@@ -61,9 +53,8 @@ const AppLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg-base)' }}>
-      {showHeaderFooter && <Header />}
+      {showHeader && <Header />}
       <main className="flex-1">{renderView()}</main>
-      {showHeaderFooter && <Footer />}
       <AuthModal />
       <ForcedUpgradeModal />
       <CookieBanner />

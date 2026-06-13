@@ -6,17 +6,19 @@ import ClassCodesAdmin from './ClassCodesAdmin';
 import CouponsAdmin from './CouponsAdmin';
 import CSVAdmin from './CSVAdmin';
 import SettingsAdmin from './SettingsAdmin';
-import { Settings, Users, Tag, KeyRound, BookOpen, FileText, Shield, ChevronRight, LogOut, LayoutDashboard } from 'lucide-react';
+import AnalyticsAdmin from './AnalyticsAdmin';
+import { Settings, Users, Tag, KeyRound, BookOpen, FileText, Shield, ChevronRight, LogOut, LayoutDashboard, BarChart3 } from 'lucide-react';
 
-type AdminTab = 'exercises' | 'users' | 'classcodes' | 'coupons' | 'csv' | 'settings';
+type AdminTab = 'exercises' | 'users' | 'classcodes' | 'coupons' | 'csv' | 'settings' | 'analytics';
 
 const NAV: { key: AdminTab; label: string; icon: React.FC<any>; desc: string }[] = [
-  { key: 'exercises',  label: 'Exercises',   icon: BookOpen,  desc: 'Manage quiz content' },
-  { key: 'users',      label: 'Users',        icon: Users,     desc: 'Performance & tiers' },
-  { key: 'classcodes', label: 'Class Codes',  icon: KeyRound,  desc: 'Student access codes' },
-  { key: 'coupons',    label: 'Coupons',      icon: Tag,       desc: 'Discount codes' },
-  { key: 'csv',        label: 'CSV Import',   icon: FileText,  desc: 'Bulk import / export' },
-  { key: 'settings',   label: 'Settings',     icon: Settings,  desc: 'Quotas & config' },
+  { key: 'exercises',  label: 'Exercises',   icon: BookOpen,   desc: 'Manage quiz content' },
+  { key: 'users',      label: 'Users',        icon: Users,      desc: 'Performance & tiers' },
+  { key: 'classcodes', label: 'Class Codes',  icon: KeyRound,   desc: 'Student access codes' },
+  { key: 'coupons',    label: 'Coupons',      icon: Tag,        desc: 'Discount codes' },
+  { key: 'csv',        label: 'CSV Import',   icon: FileText,   desc: 'Bulk import / export' },
+  { key: 'settings',   label: 'Settings',     icon: Settings,   desc: 'Quotas & config' },
+  { key: 'analytics',  label: 'Analytics',    icon: BarChart3,  desc: 'Visitor activity logs' },
 ];
 
 const AdminPanel: React.FC = () => {
@@ -35,13 +37,7 @@ const AdminPanel: React.FC = () => {
           }}>
             <Shield className="w-6 h-6" style={{ color: 'var(--danger)' }} />
           </div>
-          <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: '20px', fontWeight: 700, marginBottom: '6px' }}>Admin Only</h1>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-            Sign in with{' '}
-            <span style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--accent-text)', fontSize: '12px' }}>
-              admin@langrushi.com
-            </span>
-          </p>
+          <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: '20px', fontWeight: 700, marginBottom: '20px' }}>Admin Only</h1>
           <button className="btn-primary w-full" onClick={() => ctx.setAuthModal('login')}>Sign In</button>
         </div>
       </div>
@@ -175,6 +171,7 @@ const AdminPanel: React.FC = () => {
             {tab === 'coupons'    && <CouponsAdmin />}
             {tab === 'csv'        && <CSVAdmin />}
             {tab === 'settings'   && <SettingsAdmin />}
+            {tab === 'analytics'  && <AnalyticsAdmin />}
           </div>
         </div>
       </div>

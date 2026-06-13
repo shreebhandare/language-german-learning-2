@@ -2,10 +2,11 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { Exercise, ClassCode, Coupon, Level } from '@/lib/langrushi-data';
 import * as db from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 export type Tier = 'guest' | 'registered' | 'paid' | 'course' | 'admin';
-export type View = 'marketing' | 'learn' | 'dashboard' | 'admin' | 'courses' | 'pricing' | 'about' | 'contact';
+export type View = 'learn' | 'dashboard' | 'admin';
 
 export interface User {
   id: string;
@@ -28,6 +29,8 @@ interface AppContextType {
   register: (email: string, password: string, name: string, classCode?: string) => Promise<boolean>;
   logout: () => void;
   loginGoogle: () => Promise<void>;
+  forgotPassword: (email: string) => Promise<boolean>;
+  resetPassword: (password: string) => Promise<boolean>;
   upgradeToPaid: (couponCode?: string) => Promise<boolean>;
   applyClassCode: (code: string) => Promise<boolean>;
   exercises: Exercise[];
@@ -51,8 +54,8 @@ interface AppContextType {
   registeredQuota: number;
   setGuestQuota: (n: number) => void;
   setRegisteredQuota: (n: number) => void;
-  authModal: 'login' | 'register' | 'forgot' | null;
-  setAuthModal: (m: 'login' | 'register' | 'forgot' | null) => void;
+  authModal: 'login' | 'register' | 'forgot' | 'reset-password' | null;
+  setAuthModal: (m: 'login' | 'register' | 'forgot' | 'reset-password' | null) => void;
   forcedModal: boolean;
   setForcedModal: (b: boolean) => void;
   activeExerciseId: string | null;
@@ -61,7 +64,21 @@ interface AppContextType {
   canAccessExercise: (ex: Exercise) => { allowed: boolean; reason?: string };
   cookieConsent: 'accepted' | 'rejected' | null;
   setCookieConsent: (c: 'accepted' | 'rejected') => void;
+  answerDisplayMode: 'instant' | 'end' | 'never';
+  setAnswerDisplayMode: (mode: 'instant' | 'end' | 'never') => Promise<void>;
+  priceLifetime: number;
+  setPriceLifetime: (p: number) => Promise<void>;
+  priceCourseA1: number;
+  setPriceCourseA1: (p: number) => Promise<void>;
+  priceCourseA2: number;
+  setPriceCourseA2: (p: number) => Promise<void>;
+  priceCourseB1: number;
+  setPriceCourseB1: (p: number) => Promise<void>;
+  priceCourseB2: number;
+  setPriceCourseB2: (p: number) => Promise<void>;
+  logActivity: (action: string, details: string) => Promise<void>;
 }
+
 
 const AppContext = createContext<AppContextType | null>(null);
 export const useAppContext = () => {
@@ -76,12 +93,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const location = useLocation();
   const navigate = useNavigate();
   
-  const pathname = location.pathname.replace('/', '') || 'marketing';
-  const validViews = ['marketing', 'learn', 'dashboard', 'admin', 'courses', 'pricing', 'about', 'contact'];
-  const view = validViews.includes(pathname) ? pathname as View : 'marketing';
+  const pathname = location.pathname.replace('/', '') || 'learn';
+  const validViews = ['learn', 'dashboard', 'admin'];
+  const view = validViews.includes(pathname) ? pathname as View : 'learn';
 
   const setView = (v: View) => {
-    if (v === 'marketing') navigate('/');
+    if (v === 'learn') navigate('/');
     else navigate(`/${v}`);
   };
 
@@ -93,13 +110,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [users, setUsers] = useState<any[]>([]);
   const [guestQuota, setGuestQuotaState] = useState(2);
   const [registeredQuota, setRegisteredQuotaState] = useState(10);
-  const [authModal, setAuthModal] = useState<'login' | 'register' | 'forgot' | null>(null);
+  const [answerDisplayMode, setAnswerDisplayModeState] = useState<'instant' | 'end' | 'never'>('instant');
+  const [priceLifetime, setPriceLifetimeState] = useState(49);
+  const [priceCourseA1, setPriceCourseA1State] = useState(199);
+  const [priceCourseA2, setPriceCourseA2State] = useState(249);
+  const [priceCourseB1, setPriceCourseB1State] = useState(299);
+  const [priceCourseB2, setPriceCourseB2State] = useState(349);
+  const [authModal, setAuthModal] = useState<'login' | 'register' | 'forgot' | 'reset-password' | null>(null);
   const [forcedModal, setForcedModal] = useState(false);
   const [activeExerciseId, setActiveExerciseId] = useState<string | null>(null);
   const [cookieConsent, setCookieConsentState] = useState<'accepted' | 'rejected' | null>(null);
 
-  // Initial load from DB
+
+  // Initial load from DB + Auth session
   useEffect(() => {
+    let authListener: any = null;
     (async () => {
       try {
         const [ex, cc, co, settings] = await Promise.all([
@@ -113,32 +138,79 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCoupons(co);
         setGuestQuotaState(settings.guestQuota);
         setRegisteredQuotaState(settings.registeredQuota);
+        setAnswerDisplayModeState((settings.answerDisplayMode as any) || 'instant');
+        setPriceLifetimeState(settings.priceLifetime);
+        setPriceCourseA1State(settings.priceCourseA1);
+        setPriceCourseA2State(settings.priceCourseA2);
+        setPriceCourseB1State(settings.priceCourseB1);
+        setPriceCourseB2State(settings.priceCourseB2);
+
 
         const saved = localStorage.getItem('langrushi_cookie_consent');
         if (saved === 'accepted' || saved === 'rejected') setCookieConsentState(saved);
 
-        // Restore session
-        const sid = localStorage.getItem('langrushi_user_id');
-        if (sid) {
-          const profile = await db.fetchAllProfiles().then(list => list.find(p => p.id === sid));
+        // Check active session
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const profile = await db.fetchProfileById(session.user.id);
           if (profile) {
             const attempts = await db.fetchAttemptsForUser(profile.id);
             setUser({ ...profile, attempts });
+            if (profile.tier === 'admin') {
+              setView('admin');
+            }
+          } else {
+            setUser({
+              id: session.user.id,
+              email: session.user.email || '',
+              name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+              tier: 'registered',
+              attempts: [],
+              registeredAt: session.user.created_at || new Date().toISOString(),
+            });
           }
         }
+
+        // Subscribe to auth updates
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+          if (event === 'PASSWORD_RECOVERY') {
+            setAuthModal('reset-password');
+          }
+          if (session?.user) {
+            const profile = await db.fetchProfileById(session.user.id);
+            if (profile) {
+              const attempts = await db.fetchAttemptsForUser(profile.id);
+              setUser({ ...profile, attempts });
+              if (profile.tier === 'admin') {
+                setView('admin');
+              }
+            } else {
+              setUser({
+                id: session.user.id,
+                email: session.user.email || '',
+                name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+                tier: 'registered',
+                attempts: [],
+                registeredAt: session.user.created_at || new Date().toISOString(),
+              });
+            }
+          } else {
+            setUser(null);
+          }
+        });
+        authListener = subscription;
       } catch (e) {
         console.error('Init load failed:', e);
-      }
-      setTimeout(() => {
+      } finally {
         setLoading(false);
-      }, 3000);
+      }
     })();
+
+    return () => {
+      if (authListener) authListener.unsubscribe();
+    };
   }, []);
 
-  useEffect(() => {
-    if (user) localStorage.setItem('langrushi_user_id', user.id);
-    else localStorage.removeItem('langrushi_user_id');
-  }, [user]);
 
   const setCookieConsent = (c: 'accepted' | 'rejected') => {
     setCookieConsentState(c);
@@ -155,12 +227,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       toast({ title: 'Missing fields', description: 'Please fill all fields' });
       return false;
     }
-    const existing = await db.findProfileByEmail(email);
-    if (existing) {
-      toast({ title: 'Email already registered', description: 'Try signing in instead' });
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: window.location.origin,
+        data: {
+          full_name: name,
+        }
+      }
+    });
+
+    if (error) {
+      toast({ title: 'Registration failed', description: error.message, variant: 'destructive' });
       return false;
     }
 
+    if (!data.user) return false;
+
+    // Apply class code upgrade if present
     let tier: Tier = 'registered';
     let courseLevel: Level | undefined;
     if (classCode) {
@@ -170,68 +256,102 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         courseLevel = cc.level;
         await db.updateClassCode(cc.id, { used: cc.used + 1 });
         setClassCodes(prev => prev.map(c => c.id === cc.id ? { ...c, used: c.used + 1 } : c));
+        // Update profile in DB directly since the handle_new_user trigger inserts it asynchronously
+        await db.updateProfileTier(data.user.id, 'course', courseLevel);
       } else {
         toast({ title: 'Invalid class code', description: 'Continuing as free registered user' });
       }
     }
-
-    const id = 'u' + Date.now() + Math.random().toString(36).slice(2, 6);
-    const passwordHash = await db.hashPassword(password);
-    await db.createProfile({ id, email, passwordHash, name, tier, courseLevel });
-
-    const newUser: User = {
-      id, email, name, tier, courseLevel,
-      registeredAt: new Date().toISOString(), attempts: [],
-    };
-    setUser(newUser);
-    setAuthModal(null);
-    setForcedModal(false);
 
     fetch('https://famous.ai/api/crm/69f7abee58024ee320e024b5/subscribe', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, name, source: 'register', tags: ['langrushi', 'registered'] }),
     }).catch(() => {});
 
-    toast({ title: `Welcome, ${name}!`, description: tier === 'course' ? `Enrolled at ${courseLevel} level` : 'Account created' });
+    // If confirmation is required, session won't be active immediately
+    toast({ title: 'Registration successful', description: 'Please check your email to confirm your account.' });
+    setAuthModal(null);
     return true;
   };
 
   const login = async (email: string, password: string) => {
-    const profile = await db.authenticate(email, password);
-    if (!profile) {
-      toast({ title: 'Invalid credentials', description: 'Check email/password or register' });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      toast({ title: 'Login failed', description: error.message, variant: 'destructive' });
       return false;
     }
-    const attempts = await db.fetchAttemptsForUser(profile.id);
-    const u: User = {
-      id: profile.id, email: profile.email, name: profile.name,
-      tier: profile.tier, courseLevel: profile.course_level || undefined,
-      registeredAt: profile.registered_at, attempts,
-    };
-    setUser(u);
+
+    if (data.user) {
+      const profile = await db.fetchProfileById(data.user.id);
+      if (profile && profile.tier === 'admin') {
+        setView('admin');
+      }
+    }
+
     setAuthModal(null);
     setForcedModal(false);
-    if (u.tier === 'admin') setView('admin');
-    toast({ title: `Welcome back, ${u.name}` });
+    toast({ title: 'Signed in successfully' });
     return true;
   };
 
   const loginGoogle = async () => {
-    const email = `google_${Date.now()}@gmail.com`;
-    const id = 'g' + Date.now();
-    const passwordHash = await db.hashPassword('google_oauth_' + id);
-    await db.createProfile({ id, email, passwordHash, name: 'Google User', tier: 'registered' });
-    const u: User = { id, email, name: 'Google User', tier: 'registered', registeredAt: new Date().toISOString(), attempts: [] };
-    setUser(u);
-    setAuthModal(null);
-    setForcedModal(false);
-    toast({ title: 'Signed in with Google' });
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin + '/auth/callback',
+      }
+    });
+
+    if (error) {
+      toast({ title: 'Google sign-in failed', description: error.message, variant: 'destructive' });
+    }
   };
 
-  const logout = () => {
-    setUser(null);
-    setView('marketing');
-    toast({ title: 'Signed out' });
+  const forgotPassword = async (email: string) => {
+    if (!email) {
+      toast({ title: 'Missing email', description: 'Please enter your email address' });
+      return false;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    });
+    if (error) {
+      toast({ title: 'Password reset failed', description: error.message, variant: 'destructive' });
+      return false;
+    }
+    toast({ title: 'Reset link sent', description: 'Check your email inbox for a link to reset your password.' });
+    return true;
+  };
+
+  const resetPassword = async (password: string) => {
+    if (!password) {
+      toast({ title: 'Missing password', description: 'Please enter your new password' });
+      return false;
+    }
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) {
+      toast({ title: 'Password update failed', description: error.message, variant: 'destructive' });
+      return false;
+    }
+    toast({ title: 'Password updated successfully', description: 'Your password has been changed.' });
+    setAuthModal(null);
+    return true;
+  };
+
+  const logout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast({ title: 'Sign out failed', description: error.message, variant: 'destructive' });
+    } else {
+      setUser(null);
+      setView('learn');
+      setForcedModal(false);
+      toast({ title: 'Signed out successfully' });
+    }
   };
 
   const upgradeToPaid = async (couponCode?: string) => {
@@ -250,7 +370,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const patch = nowExhausted ? { used: newUsed, active: false } : { used: newUsed };
       await db.updateCoupon(co.id, patch);
       setCoupons(prev => prev.map(c => c.id === co.id ? { ...c, ...patch } : c));
-      toast({ title: `Coupon applied: -${co.discountType === 'percent' ? co.value + '%' : '€' + co.value}` });
+      toast({ title: `Coupon applied: -${co.discountType === 'percent' ? co.value + '%' : '₹' + co.value}` });
     }
     await db.updateProfileTier(user.id, 'paid');
     setUser({ ...user, tier: 'paid' });
@@ -279,11 +399,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const guestAttempts = JSON.parse(localStorage.getItem('langrushi_guest_attempts') || '[]');
       guestAttempts.push({ exerciseId, score, total, date: new Date().toISOString() });
       localStorage.setItem('langrushi_guest_attempts', JSON.stringify(guestAttempts));
-      return;
+    } else {
+      await db.insertAttempt(user.id, exerciseId, score, total);
+      const attempt = { exerciseId, score, total, date: new Date().toISOString() };
+      setUser(prev => prev ? { ...prev, attempts: [attempt, ...prev.attempts] } : prev);
     }
-    await db.insertAttempt(user.id, exerciseId, score, total);
-    const attempt = { exerciseId, score, total, date: new Date().toISOString() };
-    setUser(prev => prev ? { ...prev, attempts: [attempt, ...prev.attempts] } : prev);
+    logActivity('exercise_complete', `Exercise ID: ${exerciseId}, Score: ${score}/${total}`);
   };
 
   const canAccessExercise = (ex: Exercise) => {
@@ -291,7 +412,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (ex.access === 'FREE_ALL') {
       if (!user) {
         const guestAttempts = JSON.parse(localStorage.getItem('langrushi_guest_attempts') || '[]');
-        const uniqueQuizzes = new Set(guestAttempts.map((a: any) => a.exerciseId));
+        const uniqueQuizzes = new Set(
+          guestAttempts
+            .filter((a: any) => {
+              const foundEx = exercises.find(e => e.id === a.exerciseId);
+              return foundEx && foundEx.category !== 'Grammar' && foundEx.category !== 'Games';
+            })
+            .map((a: any) => a.exerciseId)
+        );
         if (uniqueQuizzes.size >= guestQuota && !uniqueQuizzes.has(ex.id)) {
           return { allowed: false, reason: 'guest_quota' };
         }
@@ -301,7 +429,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (ex.access === 'FREE_REGISTERED') {
       if (!user) return { allowed: false, reason: 'login_required' };
       if (user.tier === 'registered') {
-        const uniqueQuizzes = new Set(user.attempts.map(a => a.exerciseId));
+        const uniqueQuizzes = new Set(
+          user.attempts
+            .filter(a => {
+              const foundEx = exercises.find(e => e.id === a.exerciseId);
+              return foundEx && foundEx.category !== 'Grammar' && foundEx.category !== 'Games';
+            })
+            .map(a => a.exerciseId)
+        );
         if (uniqueQuizzes.size >= registeredQuota && !uniqueQuizzes.has(ex.id)) {
           return { allowed: false, reason: 'registered_quota' };
         }
@@ -370,11 +505,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await db.updateSetting('registered_quota', n.toString());
   };
 
+  const setAnswerDisplayMode = async (mode: 'instant' | 'end' | 'never') => {
+    setAnswerDisplayModeState(mode);
+    await db.updateSetting('answer_display_mode', mode);
+  };
+  const setPriceLifetime = async (p: number) => {
+    setPriceLifetimeState(p);
+    await db.updateSetting('price_lifetime', p.toString());
+  };
+  const setPriceCourseA1 = async (p: number) => {
+    setPriceCourseA1State(p);
+    await db.updateSetting('price_course_a1', p.toString());
+  };
+  const setPriceCourseA2 = async (p: number) => {
+    setPriceCourseA2State(p);
+    await db.updateSetting('price_course_a2', p.toString());
+  };
+  const setPriceCourseB1 = async (p: number) => {
+    setPriceCourseB1State(p);
+    await db.updateSetting('price_course_b1', p.toString());
+  };
+  const setPriceCourseB2 = async (p: number) => {
+    setPriceCourseB2State(p);
+    await db.updateSetting('price_course_b2', p.toString());
+  };
+
+  const logActivity = async (action: string, details: string) => {
+    const consent = localStorage.getItem('langrushi_cookie_consent');
+    if (consent !== 'accepted') return; // GDPR compliance: only log if accepted
+    
+    let vid = localStorage.getItem('langrushi_visitor_id');
+    if (!vid) {
+      vid = 'vid_' + Date.now() + Math.random().toString(36).substring(2, 11);
+      localStorage.setItem('langrushi_visitor_id', vid);
+    }
+    
+    try {
+      await db.insertAnalytics(vid, user?.email || null, action, details);
+    } catch (e) {
+      console.error('Failed to log activity:', e);
+    }
+  };
+
+  // GDPR Activity logging page views - defined after logActivity to avoid reference issues
+  useEffect(() => {
+    logActivity('page_view', location.pathname);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, user?.email, cookieConsent]);
+
   return (
     <AppContext.Provider value={{
       sidebarOpen, toggleSidebar, view, setView,
       user, loading, login, register, logout, loginGoogle,
-      upgradeToPaid, applyClassCode,
+      forgotPassword, resetPassword, upgradeToPaid, applyClassCode,
       exercises, refreshExercises, addExercise, updateExercise: updateExerciseCtx, removeExercise, fetchAllAttempts,
       classCodes, addClassCode, updateClassCodeLocal, removeClassCode,
       coupons, addCoupon, updateCouponLocal, removeCoupon,
@@ -383,6 +566,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       authModal, setAuthModal, forcedModal, setForcedModal,
       activeExerciseId, setActiveExerciseId, recordAttempt, canAccessExercise,
       cookieConsent, setCookieConsent,
+      answerDisplayMode, setAnswerDisplayMode,
+      priceLifetime, setPriceLifetime,
+      priceCourseA1, setPriceCourseA1,
+      priceCourseA2, setPriceCourseA2,
+      priceCourseB1, setPriceCourseB1,
+      priceCourseB2, setPriceCourseB2,
+      logActivity,
     }}>
       {children}
     </AppContext.Provider>
