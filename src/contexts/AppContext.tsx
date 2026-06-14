@@ -64,8 +64,8 @@ interface AppContextType {
   canAccessExercise: (ex: Exercise) => { allowed: boolean; reason?: string };
   cookieConsent: 'accepted' | 'rejected' | null;
   setCookieConsent: (c: 'accepted' | 'rejected') => void;
-  answerDisplayMode: 'instant' | 'end' | 'never';
-  setAnswerDisplayMode: (mode: 'instant' | 'end' | 'never') => Promise<void>;
+  answerDisplayMode: 'instant' | 'end' | 'none';
+  setAnswerDisplayMode: (mode: 'instant' | 'end' | 'none') => Promise<void>;
   priceLifetime: number;
   setPriceLifetime: (p: number) => Promise<void>;
   priceCourseA1: number;
@@ -110,7 +110,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [users, setUsers] = useState<any[]>([]);
   const [guestQuota, setGuestQuotaState] = useState(2);
   const [registeredQuota, setRegisteredQuotaState] = useState(10);
-  const [answerDisplayMode, setAnswerDisplayModeState] = useState<'instant' | 'end' | 'never'>('instant');
+  const [answerDisplayMode, setAnswerDisplayModeState] = useState<'instant' | 'end' | 'none'>('instant');
   const [priceLifetime, setPriceLifetimeState] = useState(49);
   const [priceCourseA1, setPriceCourseA1State] = useState(199);
   const [priceCourseA2, setPriceCourseA2State] = useState(249);
@@ -124,7 +124,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Initial load from DB + Auth session
   useEffect(() => {
-    let authListener: any = null;
+    // Fail-safe timeout to prevent the UI from blocking indefinitely (e.g. if Supabase is paused/offline)
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      console.warn("Initialization took too long. Proceeding with loading disabled to prevent blocking.");
+    }, 6000);
+
+    // Check if the URL indicates we are in password recovery flow
+    if (
+      window.location.hash.includes('type=recovery') ||
+      window.location.search.includes('type=recovery') ||
+      window.location.href.includes('type=recovery')
+    ) {
+      setAuthModal('reset-password');
+    }
+
+    // ⚠️ CRITICAL: Do NOT make any supabase.from() or supabase.auth.getSession() calls
+    // directly inside this callback. Supabase v2 holds an internal navigator.locks auth
+    // lock for the full async duration of this callback. Any DB call inside the callback
+    // internally calls getSession(), which waits on the same lock → DEADLOCK.
+    //
+    // Fix:
+    //  1. Skip INITIAL_SESSION — the IIFE below handles the initial data load.
+    //  2. For all subsequent events (SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED, etc.),
+    //     use setTimeout(0) to escape the lock context before making any DB calls.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setAuthModal('reset-password');
+        return;
+      }
+
+      // INITIAL_SESSION is handled by the IIFE below — skip it here to avoid deadlock
+      if (event === 'INITIAL_SESSION') return;
+
+      // For subsequent auth events (SIGNED_IN, SIGNED_OUT, USER_UPDATED, TOKEN_REFRESHED…)
+      // escape the auth lock via setTimeout before making any Supabase calls
+      setTimeout(async () => {
+        if (session?.user) {
+          const profile = await db.fetchProfileById(session.user.id);
+          if (profile) {
+            const attempts = await db.fetchAttemptsForUser(profile.id);
+            setUser({ ...profile, attempts });
+            if (profile.tier === 'admin') {
+              setView('admin');
+            }
+          } else {
+            setUser({
+              id: session.user.id,
+              email: session.user.email || '',
+              name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+              tier: 'registered',
+              attempts: [],
+              registeredAt: session.user.created_at || new Date().toISOString(),
+            });
+          }
+        } else {
+          setUser(null);
+          setView('learn');
+          setForcedModal(false);
+        }
+      }, 0);
+    });
+
+    const authListener = subscription;
+
+    // IIFE: loads all initial data and checks session independently of the auth listener
     (async () => {
       try {
         const [ex, cc, co, settings] = await Promise.all([
@@ -145,11 +209,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setPriceCourseB1State(settings.priceCourseB1);
         setPriceCourseB2State(settings.priceCourseB2);
 
-
         const saved = localStorage.getItem('langrushi_cookie_consent');
         if (saved === 'accepted' || saved === 'rejected') setCookieConsentState(saved);
 
-        // Check active session
+        // Check active session — safe to call here because we are OUTSIDE the auth lock
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           const profile = await db.fetchProfileById(session.user.id);
@@ -170,35 +233,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             });
           }
         }
-
-        // Subscribe to auth updates
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-          if (event === 'PASSWORD_RECOVERY') {
-            setAuthModal('reset-password');
-          }
-          if (session?.user) {
-            const profile = await db.fetchProfileById(session.user.id);
-            if (profile) {
-              const attempts = await db.fetchAttemptsForUser(profile.id);
-              setUser({ ...profile, attempts });
-              if (profile.tier === 'admin') {
-                setView('admin');
-              }
-            } else {
-              setUser({
-                id: session.user.id,
-                email: session.user.email || '',
-                name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
-                tier: 'registered',
-                attempts: [],
-                registeredAt: session.user.created_at || new Date().toISOString(),
-              });
-            }
-          } else {
-            setUser(null);
-          }
-        });
-        authListener = subscription;
       } catch (e) {
         console.error('Init load failed:', e);
       } finally {
@@ -207,9 +241,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     })();
 
     return () => {
+      clearTimeout(timeoutId);
       if (authListener) authListener.unsubscribe();
     };
   }, []);
+
 
 
   const setCookieConsent = (c: 'accepted' | 'rejected') => {
@@ -343,15 +379,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const logout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast({ title: 'Sign out failed', description: error.message, variant: 'destructive' });
-    } else {
-      setUser(null);
-      setView('learn');
-      setForcedModal(false);
-      toast({ title: 'Signed out successfully' });
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Supabase signOut error:', error);
+      }
+    } catch (e) {
+      console.error('Supabase signOut exception:', e);
     }
+    // Always clear local state
+    setUser(null);
+    setView('learn');
+    setForcedModal(false);
+    toast({ title: 'Signed out successfully' });
   };
 
   const upgradeToPaid = async (couponCode?: string) => {
@@ -505,7 +545,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await db.updateSetting('registered_quota', n.toString());
   };
 
-  const setAnswerDisplayMode = async (mode: 'instant' | 'end' | 'never') => {
+  const setAnswerDisplayMode = async (mode: 'instant' | 'end' | 'none') => {
     setAnswerDisplayModeState(mode);
     await db.updateSetting('answer_display_mode', mode);
   };

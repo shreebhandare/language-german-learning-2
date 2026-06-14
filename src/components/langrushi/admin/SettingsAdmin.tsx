@@ -118,10 +118,10 @@ const SettingsAdmin: React.FC = () => {
             label="Correct Answer Feedback"
             desc="Control when correct answers are shown to the user."
             value={answerDisplayMode}
-            options={[
+             options={[
               { label: 'In the quiz itself', value: 'instant' },
               { label: 'In the end summary review', value: 'end' },
-              { label: 'Never reveal correct answers', value: 'never' },
+              { label: 'Never reveal correct answers', value: 'none' },
             ]}
             onChange={setAnswerDisplayMode}
           />

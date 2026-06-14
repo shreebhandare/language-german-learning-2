@@ -27,7 +27,7 @@ export interface Exercise {
   mediaUrl?: string;
   transcript?: string;
   questions?: Question[];
-  answerDisplayMode?: 'instant' | 'end' | 'none';
+  answerDisplayMode?: 'instant' | 'end' | 'none' | '';
   allowSkip?: boolean;
   // Passive
   prompt?: string;

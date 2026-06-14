@@ -8,9 +8,11 @@ import { ArrowLeft, ArrowRight, CheckCircle2, XCircle, HelpCircle, Lightbulb, He
 interface Props { exercise: Exercise; onClose: () => void; }
 
 const QuizPlayer: React.FC<Props> = ({ exercise, onClose }) => {
-  const { recordAttempt, user, exercises, answerDisplayMode } = useAppContext();
+  const { recordAttempt, user, exercises, answerDisplayMode: globalAnswerDisplayMode } = useAppContext();
   
   const allowSkip = exercise.allowSkip !== false;
+  // Use per-exercise setting if set, otherwise fall back to the global site-wide default
+  const answerDisplayMode = exercise.answerDisplayMode || globalAnswerDisplayMode;
 
   const questions = exercise.questions || [];
   const [queue, setQueue] = useState<number[]>(() => questions.map((_, i) => i));

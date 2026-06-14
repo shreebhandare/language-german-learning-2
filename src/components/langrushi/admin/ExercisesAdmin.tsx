@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { LEVELS, CATEGORIES, Level, Category, AccessFlag, ExerciseType, Exercise } from '@/lib/langrushi-data';
 import { toast } from '@/components/ui/use-toast';
@@ -46,14 +46,14 @@ interface FormState {
   title: string; level: Level; category: Category; subPart: string;
   type: ExerciseType; access: AccessFlag; mediaUrl: string; transcript: string;
   prompt: string; modelAnswer: string; questions: any[]; guidance: string[];
-  answerDisplayMode: 'instant' | 'end' | 'none'; allowSkip: boolean;
+  answerDisplayMode: 'instant' | 'end' | 'none' | ''; allowSkip: boolean;
 }
 
 const emptyForm = (): FormState => ({
   title: '', level: 'A1', category: 'Listening', subPart: 'Teil 1',
   type: 'Interactive', access: 'FREE_ALL', mediaUrl: '', transcript: '',
   prompt: '', modelAnswer: '', questions: [], guidance: [],
-  answerDisplayMode: 'instant', allowSkip: true,
+  answerDisplayMode: '', allowSkip: true,
 });
 
 /* ── Skeleton row ────────────────────────────── */
@@ -76,6 +76,17 @@ const ExercisesAdmin: React.FC = () => {
   const [form, setForm] = useState<FormState>(emptyForm());
   const [filter, setFilter] = useState({ level: '', category: '', search: '' });
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<string>('updatedAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const toggleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortOrder(key === 'updatedAt' ? 'desc' : 'asc');
+    }
+  };
 
   const startAdd = () => { setForm(emptyForm()); setEditId(null); setMode('add'); };
   const startEdit = (ex: Exercise) => {
@@ -84,7 +95,7 @@ const ExercisesAdmin: React.FC = () => {
       type: ex.type, access: ex.access, mediaUrl: ex.mediaUrl || '',
       transcript: ex.transcript || '', prompt: ex.prompt || '',
       modelAnswer: ex.modelAnswer || '', questions: ex.questions || [],
-      guidance: ex.guidance || [], answerDisplayMode: ex.answerDisplayMode || 'instant',
+      guidance: ex.guidance || [], answerDisplayMode: ex.answerDisplayMode || '',
       allowSkip: ex.allowSkip !== false,
     });
     setEditId(ex.id); setMode('edit');
@@ -127,6 +138,31 @@ const ExercisesAdmin: React.FC = () => {
     if (filter.search && !e.title.toLowerCase().includes(filter.search.toLowerCase())) return false;
     return true;
   });
+
+  const sortedExercises = useMemo(() => {
+    const list = [...filtered];
+    list.sort((a, b) => {
+      let aVal: any = (a as any)[sortKey];
+      let bVal: any = (b as any)[sortKey];
+
+      if (sortKey === 'updatedAt') {
+        aVal = aVal ? new Date(aVal).getTime() : 0;
+        bVal = bVal ? new Date(bVal).getTime() : 0;
+      } else if (sortKey === 'questions') {
+        aVal = a.type === 'Interactive' ? (a.questions?.length || 0) : 0;
+        bVal = b.type === 'Interactive' ? (b.questions?.length || 0) : 0;
+      }
+
+      if (typeof aVal === 'string') {
+        const comp = aVal.localeCompare(bVal || '');
+        return sortOrder === 'asc' ? comp : -comp;
+      }
+
+      const comp = (aVal || 0) - (bVal || 0);
+      return sortOrder === 'asc' ? comp : -comp;
+    });
+    return list;
+  }, [filtered, sortKey, sortOrder]);
 
   /* ── Form view ─────────────────────────────── */
 
@@ -176,7 +212,8 @@ const ExercisesAdmin: React.FC = () => {
                 </div>
                 <div>
                   <Label>Answer Display</Label>
-                  <Sel value={form.answerDisplayMode} onChange={e => setForm({ ...form, answerDisplayMode: e.target.value as 'instant' | 'end' | 'none' })}>
+                  <Sel value={form.answerDisplayMode} onChange={e => setForm({ ...form, answerDisplayMode: e.target.value as 'instant' | 'end' | 'none' | '' })}>
+                    <option value="">Default (Use global setting)</option>
                     <option value="instant">Show instantly</option>
                     <option value="end">Show at end</option>
                     <option value="none">Don't show</option>
@@ -352,13 +389,13 @@ const ExercisesAdmin: React.FC = () => {
         <table className="data-table">
           <thead>
             <tr>
-              <th style={{ width: '32%' }}>Title</th>
-              <th>Level</th>
-              <th>Category</th>
-              <th>Type</th>
-              <th style={{ textAlign: 'center' }}>Questions</th>
-              <th>Access</th>
-              <th>Last Updated</th>
+              <th style={{ width: '32%', cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('title')}>Title {sortKey === 'title' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
+              <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('level')}>Level {sortKey === 'level' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
+              <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('category')}>Category {sortKey === 'category' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
+              <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('type')}>Type {sortKey === 'type' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
+              <th style={{ textAlign: 'center', cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('questions')}>Questions {sortKey === 'questions' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
+              <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('access')}>Access {sortKey === 'access' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
+              <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('updatedAt')}>Last Updated {sortKey === 'updatedAt' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
               <th style={{ textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
@@ -376,7 +413,7 @@ const ExercisesAdmin: React.FC = () => {
                   </div>
                 </td>
               </tr>
-            ) : filtered.map(e => (
+            ) : sortedExercises.map(e => (
               <tr key={e.id}>
                 <td style={{ color: 'var(--text-primary)', fontWeight: 600, maxWidth: '280px' }}>
                   <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.title}</div>
@@ -394,7 +431,7 @@ const ExercisesAdmin: React.FC = () => {
                   {e.updatedAt ? (
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <Clock className="w-3 h-3" style={{ flexShrink: 0 }} />
-                      {new Date(e.updatedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      {new Date(e.updatedAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}
                     </span>
                   ) : '—'}
                 </td>

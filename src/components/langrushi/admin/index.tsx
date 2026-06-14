@@ -119,7 +119,8 @@ const AdminPanel: React.FC = () => {
               <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '9px', color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>admin</div>
             </div>
             <button
-              onClick={ctx.logout}
+              type="button"
+              onClick={() => ctx.logout()}
               title="Sign out"
               aria-label="Sign out"
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '3px', borderRadius: '5px', transition: 'color 180ms ease' }}

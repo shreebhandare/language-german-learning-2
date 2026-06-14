@@ -1,0 +1,6 @@
+feat(settings): support default/inherited quiz feedback settings and unify vocabulary
+
+- Aligned the global setting value from 'never' to 'none' in SettingsAdmin and AppContextType to unify vocabulary with the exercise-level display mode options.
+- Added a "Default (Use global setting)" option to the Answer Display dropdown in the exercise editor form (ExercisesAdmin).
+- Updated db.ts to fetch exercises without a custom feedback setting with an empty string ('') instead of defaulting to 'instant'.
+- Configured exercise database updates/inserts to save null when the default option is chosen so it inherits the global setting correctly.

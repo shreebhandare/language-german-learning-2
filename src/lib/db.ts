@@ -24,7 +24,7 @@ export async function fetchExercises(): Promise<Exercise[]> {
     mediaUrl: r.media_url || undefined,
     transcript: r.transcript || undefined,
     questions: r.questions || undefined,
-    answerDisplayMode: r.answer_display_mode || 'instant',
+    answerDisplayMode: r.answer_display_mode || '',
     allowSkip: r.allow_skip !== false,
     prompt: r.prompt || undefined,
     guidance: r.guidance || undefined,
@@ -39,7 +39,7 @@ export async function insertExercise(ex: Exercise): Promise<void> {
     sub_part: ex.subPart, type: ex.type, access: ex.access,
     media_url: ex.mediaUrl || null, transcript: ex.transcript || null,
     questions: ex.questions || null,
-    answer_display_mode: ex.answerDisplayMode || 'instant',
+    answer_display_mode: ex.answerDisplayMode || null,
     allow_skip: ex.allowSkip !== false,
     prompt: ex.prompt || null, guidance: ex.guidance || null, model_answer: ex.modelAnswer || null,
     updated_at: new Date().toISOString(),
@@ -57,13 +57,14 @@ export async function updateExercise(id: string, ex: Partial<Exercise>): Promise
   if (ex.mediaUrl !== undefined) patch.media_url = ex.mediaUrl || null;
   if (ex.transcript !== undefined) patch.transcript = ex.transcript || null;
   if (ex.questions !== undefined) patch.questions = ex.questions || null;
-  if (ex.answerDisplayMode !== undefined) patch.answer_display_mode = ex.answerDisplayMode;
+  if (ex.answerDisplayMode !== undefined) patch.answer_display_mode = ex.answerDisplayMode || null;
   if (ex.allowSkip !== undefined) patch.allow_skip = ex.allowSkip;
   if (ex.prompt !== undefined) patch.prompt = ex.prompt || null;
   if (ex.guidance !== undefined) patch.guidance = ex.guidance || null;
   if (ex.modelAnswer !== undefined) patch.model_answer = ex.modelAnswer || null;
   patch.updated_at = new Date().toISOString();
-  await supabase.from('langrushi_exercises').update(patch).eq('id', id);
+  const { error } = await supabase.from('langrushi_exercises').update(patch).eq('id', id);
+  if (error) console.error('[db] updateExercise failed:', error);
 }
 
 export async function deleteExercise(id: string): Promise<void> {
@@ -206,7 +207,10 @@ export async function fetchSettings(): Promise<{
 }
 
 export async function updateSetting(key: string, value: string): Promise<void> {
-  await supabase.from('langrushi_settings').upsert({ key, value });
+  const { error } = await supabase
+    .from('langrushi_settings')
+    .upsert({ key, value }, { onConflict: 'key' });
+  if (error) console.error('[db] updateSetting failed:', key, error);
 }
 
 export async function insertAnalytics(visitorId: string, email: string | null, actionType: string, details: string): Promise<void> {

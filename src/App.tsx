@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { AuthCallbackPage } from "./components/langrushi/AuthCallbackPage";
+import { AppProvider } from "./contexts/AppContext";
 
 const queryClient = new QueryClient();
 
@@ -18,14 +19,16 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/learn" element={<Index />} />
-            <Route path="/dashboard" element={<Index />} />
-            <Route path="/admin" element={<Index />} />
-            <Route path="/auth/callback" element={<AuthCallbackPage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AppProvider>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/learn" element={<Index />} />
+              <Route path="/dashboard" element={<Index />} />
+              <Route path="/admin" element={<Index />} />
+              <Route path="/auth/callback" element={<AuthCallbackPage />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AppProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
