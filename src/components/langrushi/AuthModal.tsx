@@ -42,7 +42,7 @@ const AuthModal: React.FC = () => {
 
   return (
     <Dialog open={!!authModal} onOpenChange={() => setAuthModal(null)}>
-      <DialogContent className="sm:max-w-md z-[110]">
+      <DialogContent className="w-[92%] max-w-md max-h-[90vh] overflow-y-auto z-[110]">
         <DialogHeader>
           <DialogTitle className="text-2xl">
             {authModal === 'login' 

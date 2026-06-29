@@ -97,10 +97,25 @@ DROP POLICY IF EXISTS "Allow all for exercises" ON app_exercises;
 CREATE POLICY "Allow all for exercises" ON app_exercises FOR ALL USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow all for profiles" ON shared_profiles;
+DROP POLICY IF EXISTS "Own profile read" ON shared_profiles;
+DROP POLICY IF EXISTS "Own profile update" ON shared_profiles;
+DROP POLICY IF EXISTS "Admin full access" ON shared_profiles;
+
 CREATE POLICY "Own profile read" ON shared_profiles FOR SELECT USING (auth.uid()::text = id);
 CREATE POLICY "Own profile update" ON shared_profiles FOR UPDATE USING (auth.uid()::text = id);
+
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.shared_profiles
+    WHERE id = auth.uid()::text AND tier = 'admin'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 CREATE POLICY "Admin full access" ON shared_profiles FOR ALL USING (
-  EXISTS (SELECT 1 FROM shared_profiles WHERE id = auth.uid()::text AND tier = 'admin')
+  public.is_admin()
 );
 
 DROP POLICY IF EXISTS "Allow all for attempts" ON app_attempts;

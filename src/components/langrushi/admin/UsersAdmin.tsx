@@ -136,7 +136,7 @@ const UsersAdmin: React.FC = () => {
       {/* Leaderboard */}
       {!loading && ranked.length > 0 && (
         <CollapsibleCard label="Leaderboard">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div className="dashboard-grid-equal">
             <div style={{ background: 'var(--bg-elevated)', borderRadius: '10px', padding: '16px', border: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
                 <Trophy className="w-4 h-4" style={{ color: '#D97706' }} />
@@ -234,7 +234,7 @@ const UsersAdmin: React.FC = () => {
                         { val: u.totalAttempts > 0 ? `${u.avgPct}%` : '—', sub: 'avg', color: u.totalAttempts > 0 ? ScoreColor(u.avgPct) : undefined },
                         { val: u.totalAttempts, sub: 'attempts' },
                       ].map((s, i) => (
-                        <div key={i} style={{ textAlign: 'center', width: '60px', flexShrink: 0 }}>
+                        <div key={i} style={{ textAlign: 'center', width: '60px', flexShrink: 0 }} className="hidden sm:block">
                           <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontWeight: 700, fontSize: '14px', color: s.color ?? 'var(--text-primary)' }}>{s.val}</div>
                           <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{s.sub}</div>
                         </div>
@@ -252,7 +252,7 @@ const UsersAdmin: React.FC = () => {
                         {attempts.length === 0
                           ? <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', fontStyle: 'italic' }}>No quiz attempts recorded.</div>
                           : (
-                            <div style={{ borderRadius: '9px', overflow: 'hidden', border: '1px solid var(--border)', marginTop: '12px', background: 'var(--bg-surface)' }}>
+                            <div className="table-container" style={{ borderRadius: '9px', border: '1px solid var(--border)', marginTop: '12px', background: 'var(--bg-surface)' }}>
                               <table className="data-table">
                                 <thead>
                                   <tr>

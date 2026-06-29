@@ -189,7 +189,7 @@ const AnalyticsAdmin: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div style={{ overflowX: 'auto', margin: '-20px' }}>
+          <div className="table-container" style={{ margin: '-20px' }}>
             <table className="data-table">
               <thead>
                 <tr>

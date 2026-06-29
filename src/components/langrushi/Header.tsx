@@ -51,17 +51,22 @@ const Header: React.FC = () => {
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         {/* Logo */}
         <Link to="/" onClick={() => setMobileOpen(false)} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-          <img src="https://cdn.designfast.io/image/2026-05-04/bf29e216-cf4b-45ef-b1eb-9ecd8f9b150a.png" alt="Langrushi" width={180} height={90} style={{ objectFit: 'contain' }} />
+          <img 
+            src="https://cdn.designfast.io/image/2026-05-04/bf29e216-cf4b-45ef-b1eb-9ecd8f9b150a.png" 
+            alt="Langrushi" 
+            style={{ objectFit: 'contain', height: '45px' }} 
+            className="md:h-[90px]"
+          />
         </Link>
 
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '2px' }} className="hidden md:flex">
+        <nav className="hidden md:flex items-center gap-[2px]">
           {user?.tier === 'admin' && (
             <NavBtn navKey="admin" label="Admin" icon={<Shield className="w-3.5 h-3.5" />} />
           )}
         </nav>
 
         {/* Desktop auth */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} className="hidden md:flex">
+        <div className="hidden md:flex items-center gap-2">
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Link to="/dashboard" style={{
@@ -84,6 +89,11 @@ const Header: React.FC = () => {
                 <span style={{ fontFamily: 'Figtree, sans-serif', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{user.name}</span>
                 {tierInfo && <span className={tierInfo.cls}>{tierInfo.label}</span>}
               </Link>
+              {user.tier === 'admin' && (
+                <Button variant="outline" size="sm" onClick={() => setView('admin')} className="border-amber-300 text-amber-700 hover:bg-amber-50 flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5" /> Admin
+                </Button>
+              )}
               <Button variant="ghost" size="sm" onClick={logout} title="Sign out" aria-label="Sign out">
                 <LogOut className="w-4 h-4" />
               </Button>
@@ -110,14 +120,67 @@ const Header: React.FC = () => {
       {/* Mobile menu */}
       {mobileOpen && (
         <div style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-surface)', padding: '10px 16px 14px' }}>
-          <div style={{ paddingTop: '10px', borderTop: '1px solid var(--border)', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {user ? (
-              <Button variant="outline" onClick={logout}>Sign out ({user.name})</Button>
-            ) : (
               <>
+                {/* Profile display on mobile */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 12px',
+                  borderRadius: '10px',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border)',
+                  marginBottom: '4px'
+                }}>
+                  <div style={{
+                    width: '28px', height: '28px', borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #2563EB 0%, #7C3AED 100%)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontWeight: 700, fontSize: '12px', color: '#fff', flexShrink: 0,
+                  }}>
+                    {user.name?.[0]?.toUpperCase() ?? '?'}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: 'Figtree, sans-serif', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {user.name}
+                    </div>
+                  </div>
+                  {tierInfo && <span className={tierInfo.cls}>{tierInfo.label}</span>}
+                </div>
+
+                {/* Dashboard Access Button */}
+                <Link to="/dashboard" onClick={() => setMobileOpen(false)} style={{ textDecoration: 'none' }} className="w-full">
+                  <Button className="w-full bg-[#3563E9] hover:bg-[#1E5AE6] text-white flex items-center justify-center gap-2">
+                    <LayoutDashboard className="w-4 h-4" /> Learner Dashboard
+                  </Button>
+                </Link>
+
+                {/* Admin Dashboard Button - only for admins */}
+                {user.tier === 'admin' && (
+                  <Button 
+                    className="w-full bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center gap-2" 
+                    onClick={() => { setView('admin'); setMobileOpen(false); }}
+                  >
+                    <Shield className="w-4 h-4" /> Admin Dashboard
+                  </Button>
+                )}
+
+                {/* Sign Out Button */}
+                <Button 
+                  variant="outline" 
+                  className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 flex items-center justify-center gap-2" 
+                  onClick={() => { logout(); setMobileOpen(false); }}
+                >
+                  <LogOut className="w-4 h-4" /> Sign Out
+                </Button>
+              </>
+            ) : (
+              <div style={{ paddingTop: '10px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <Button variant="outline" className="w-full" onClick={() => { setAuthModal('login'); setMobileOpen(false); }}>Sign In</Button>
                 <Button className="w-full bg-[#0a192f] hover:bg-[#020c1b]" onClick={() => { setAuthModal('register'); setMobileOpen(false); }}>Get Started</Button>
-              </>
+              </div>
             )}
           </div>
         </div>

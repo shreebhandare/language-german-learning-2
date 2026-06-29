@@ -82,12 +82,17 @@ export async function fetchAllProfiles(): Promise<any[]> {
 }
 
 export async function fetchProfileById(id: string): Promise<any | null> {
+  console.log('[db] fetchProfileById called with id:', id);
   const { data, error } = await supabase.from('shared_profiles').select('*').eq('id', id).maybeSingle();
   if (error) {
-    console.error('Error fetching profile:', error);
+    console.error('[db] fetchProfileById error:', error.message, error.code, error.details);
     return null;
   }
-  if (!data) return null;
+  if (!data) {
+    console.warn('[db] fetchProfileById: no profile row found for id:', id);
+    return null;
+  }
+  console.log('[db] fetchProfileById result:', { id: data.id, email: data.email, tier: data.tier });
   return {
     id: data.id,
     email: data.email,

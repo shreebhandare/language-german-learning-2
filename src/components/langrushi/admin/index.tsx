@@ -24,6 +24,7 @@ const NAV: { key: AdminTab; label: string; icon: React.FC<any>; desc: string }[]
 const AdminPanel: React.FC = () => {
   const ctx = useAppContext();
   const [tab, setTab] = useState<AdminTab>('exercises');
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   /* ── Access guard ────────────────────────── */
   if (ctx.user?.tier !== 'admin') {
@@ -48,32 +49,34 @@ const AdminPanel: React.FC = () => {
   const ActiveIcon = activeNav.icon;
 
   return (
-    <div className="admin-panel flex" style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
+    <div className="admin-panel flex relative" style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
+      {/* Mobile Sidebar backdrop overlay */}
+      {mobileSidebarOpen && (
+        <div 
+          className="dashboard-sidebar-overlay" 
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
 
       {/* ── Sidebar ───────────────────────── */}
-      <aside style={{
-        width: '220px', flexShrink: 0,
-        background: 'var(--bg-surface)',
-        borderRight: '1px solid var(--border)',
-        display: 'flex', flexDirection: 'column',
-        position: 'sticky', top: '0',
-        height: '100vh',
-      }}>
+      <aside 
+        className={`dashboard-sidebar ${mobileSidebarOpen ? 'open' : ''}`}
+        style={{
+          width: '220px', flexShrink: 0,
+          background: 'var(--bg-surface)',
+          borderRight: '1px solid var(--border)',
+          display: 'flex', flexDirection: 'column',
+          position: 'sticky', top: '0',
+          height: '100vh',
+        }}
+      >
         {/* Brand */}
-        <div style={{ padding: '18px 16px 12px', borderBottom: '1px solid var(--border)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-            <div style={{
-              width: '30px', height: '30px', borderRadius: '8px',
-              background: 'var(--accent-light)', border: '1px solid rgba(37,99,235,0.2)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-            }}>
-              <Shield className="w-4 h-4" style={{ color: 'var(--accent)' }} />
-            </div>
-            <div>
-              <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)' }}>Admin Panel</div>
-              <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Command Center</div>
-            </div>
-          </div>
+        <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <img 
+            src="https://cdn.designfast.io/image/2026-05-04/bf29e216-cf4b-45ef-b1eb-9ecd8f9b150a.png" 
+            alt="Langrushi" 
+            style={{ objectFit: 'contain', height: '50px' }} 
+          />
         </div>
 
         {/* Nav */}
@@ -84,7 +87,10 @@ const AdminPanel: React.FC = () => {
             return (
               <button
                 key={item.key}
-                onClick={() => setTab(item.key)}
+                onClick={() => {
+                  setTab(item.key);
+                  setMobileSidebarOpen(false);
+                }}
                 className={`nav-item${active ? ' active' : ''}`}
                 title={item.desc}
                 aria-label={item.label}
@@ -120,7 +126,10 @@ const AdminPanel: React.FC = () => {
             </div>
             <button
               type="button"
-              onClick={() => ctx.logout()}
+              onClick={() => {
+                ctx.logout();
+                setMobileSidebarOpen(false);
+              }}
               title="Sign out"
               aria-label="Sign out"
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '3px', borderRadius: '5px', transition: 'color 180ms ease' }}
@@ -136,26 +145,30 @@ const AdminPanel: React.FC = () => {
       {/* ── Main panel ────────────────────── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Top bar */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '12px',
-          padding: '0 28px', height: '56px', flexShrink: 0,
-          background: 'var(--bg-surface)',
-          borderBottom: '1px solid var(--border)',
-        }}>
-          <div style={{
-            width: '34px', height: '34px', borderRadius: '9px',
-            background: 'var(--accent-light)', border: '1px solid rgba(37,99,235,0.18)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            <ActiveIcon className="w-4 h-4" style={{ color: 'var(--accent)' }} />
-          </div>
+        <div 
+          className="dashboard-header-bar"
+          style={{
+            display: 'flex', alignItems: 'center', gap: '12px',
+            padding: '0 28px', height: '56px', flexShrink: 0,
+            background: 'var(--bg-surface)',
+            borderBottom: '1px solid var(--border)',
+          }}
+        >
+          {/* Sidebar toggle button for mobile */}
+          <button
+            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+            className="md:hidden p-1 mr-1 hover:bg-slate-100 rounded-lg focus:outline-none"
+            aria-label="Toggle sidebar menu"
+          >
+            <img src="/placeholder.svg" alt="Menu" width={28} height={28} style={{ objectFit: 'contain' }} />
+          </button>
+
           <div>
             <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '16px', color: 'var(--text-primary)' }}>{activeNav.label}</div>
-            <div style={{ fontFamily: 'Figtree, sans-serif', fontSize: '12px', color: 'var(--text-muted)' }}>{activeNav.desc}</div>
           </div>
 
           {/* Breadcrumb */}
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'IBM Plex Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'IBM Plex Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }} className="hidden md:flex">
             <LayoutDashboard className="w-3 h-3" />
             <span>Admin</span>
             <ChevronRight className="w-3 h-3" />
@@ -164,7 +177,7 @@ const AdminPanel: React.FC = () => {
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, padding: '28px', overflowY: 'auto' }}>
+        <div className="dashboard-main-content" style={{ flex: 1, padding: '28px', overflowY: 'auto' }}>
           <div key={tab} className="animate-fade-up">
             {tab === 'exercises'  && <ExercisesAdmin />}
             {tab === 'users'      && <UsersAdmin />}

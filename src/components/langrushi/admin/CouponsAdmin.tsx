@@ -156,7 +156,7 @@ const CouponsAdmin: React.FC = () => {
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>Create a discount code above.</p>
           </div>
         ) : (
-          <div style={{ overflowX: 'auto', margin: '-20px' }}>
+          <div className="table-container" style={{ margin: '-20px' }}>
             <table className="data-table">
               <thead>
                 <tr>

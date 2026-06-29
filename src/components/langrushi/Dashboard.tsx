@@ -3,7 +3,8 @@ import { useAppContext } from '@/contexts/AppContext';
 import {
   Award, TrendingUp, BookOpen, ArrowRight, Sparkles, GraduationCap,
   KeyRound, PlayCircle, Star, CheckCircle, Target, LayoutDashboard,
-  ChevronRight, BarChart3, Lock, LogOut, ArrowLeft, CreditCard
+  ChevronRight, BarChart3, Lock, LogOut, ArrowLeft, CreditCard,
+  Menu, X
 } from 'lucide-react';
 import CollapsibleCard from './admin/CollapsibleCard';
 
@@ -31,6 +32,13 @@ const Dashboard: React.FC = () => {
   const [classCode, setClassCode] = useState('');
   const [tab, setTab] = useState<DashboardTab>('overview');
   const [couponCode, setCouponCode] = useState('');
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  const selectTab = (t: DashboardTab) => {
+    setTab(t);
+    setMobileSidebarOpen(false);
+  };
+
 
 
   /* ── Not logged in ───────────────────────────── */
@@ -128,7 +136,7 @@ const Dashboard: React.FC = () => {
       {renderTierBanner()}
 
       {/* Overview Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px', alignItems: 'start' }}>
+      <div className="dashboard-grid-2col">
         {/* Recommended list mini */}
         <div className="card p-5">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
@@ -322,7 +330,7 @@ const Dashboard: React.FC = () => {
         {attempts.length === 0 ? (
           <p style={{ fontFamily: 'Figtree, sans-serif', fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic', textAlign: 'center' }}>No quiz attempts recorded yet. Start practicing!</p>
         ) : (
-          <div style={{ margin: '-20px', borderRadius: '0 0 12px 12px', overflow: 'hidden' }}>
+          <div className="table-container" style={{ margin: '-20px', borderRadius: '0 0 12px 12px', overflow: 'hidden' }}>
             <table className="data-table">
               <thead>
                 <tr>
@@ -370,7 +378,7 @@ const Dashboard: React.FC = () => {
         <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)' }}>Access & Class Codes</h2>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'start' }}>
+      <div className="dashboard-grid-equal">
         {/* Class Code Activation */}
         <div className="card p-5">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
@@ -426,7 +434,7 @@ const Dashboard: React.FC = () => {
           <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)' }}>Premium Access & Billing</h2>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '20px', alignItems: 'start' }}>
+        <div className="dashboard-grid-premium">
           {/* Checkout Card */}
           <div className="card p-6" style={{
             position: 'relative',
@@ -511,37 +519,40 @@ const Dashboard: React.FC = () => {
 
 
   return (
-    <div className="admin-panel flex" style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
+    <div className="admin-panel flex relative" style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
+      {/* Mobile Sidebar backdrop overlay */}
+      {mobileSidebarOpen && (
+        <div 
+          className="dashboard-sidebar-overlay" 
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
       {/* ── Sidebar ── */}
-      <aside style={{
-        width: '220px', flexShrink: 0,
-        background: 'var(--bg-surface)',
-        borderRight: '1px solid var(--border)',
-        display: 'flex', flexDirection: 'column',
-        position: 'sticky', top: '0',
-        height: '100vh',
-      }}>
+      <aside 
+        className={`dashboard-sidebar ${mobileSidebarOpen ? 'open' : ''}`}
+        style={{
+          width: '220px', flexShrink: 0,
+          background: 'var(--bg-surface)',
+          borderRight: '1px solid var(--border)',
+          display: 'flex', flexDirection: 'column',
+          position: 'sticky', top: '0',
+          height: '100vh',
+        }}
+      >
         {/* Brand Header */}
-        <div style={{ padding: '18px 16px 12px', borderBottom: '1px solid var(--border)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-            <div style={{
-              width: '30px', height: '30px', borderRadius: '8px',
-              background: 'var(--accent-light)', border: '1px solid rgba(37,99,235,0.2)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-            }}>
-              <GraduationCap className="w-4 h-4" style={{ color: 'var(--accent)' }} />
-            </div>
-            <div>
-              <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)' }}>Learner Center</div>
-              <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Student Dashboard</div>
-            </div>
-          </div>
+        <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <img 
+            src="https://cdn.designfast.io/image/2026-05-04/bf29e216-cf4b-45ef-b1eb-9ecd8f9b150a.png" 
+            alt="Langrushi" 
+            style={{ objectFit: 'contain', height: '50px' }} 
+          />
         </div>
 
         {/* Study Portal Back Button */}
         <div style={{ padding: '10px 8px 8px', borderBottom: '1px solid var(--border)' }}>
           <button
-            onClick={() => setView('learn')}
+            onClick={() => { setView('learn'); setMobileSidebarOpen(false); }}
             className="btn-primary w-full animate-pulse-subtle"
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', fontSize: '13px', padding: '8px 12px' }}
           >
@@ -557,7 +568,7 @@ const Dashboard: React.FC = () => {
             return (
               <button
                 key={item.key}
-                onClick={() => setTab(item.key)}
+                onClick={() => selectTab(item.key)}
                 className={`nav-item${active ? ' active' : ''}`}
                 title={item.desc}
                 aria-label={item.label}
@@ -609,35 +620,30 @@ const Dashboard: React.FC = () => {
       {/* ── Main content pane ── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Sub Header top bar */}
-        <div style={{
+        <div className="dashboard-header-bar" style={{
           display: 'flex', alignItems: 'center', gap: '12px',
           padding: '0 28px', height: '56px', flexShrink: 0,
           background: 'var(--bg-surface)',
           borderBottom: '1px solid var(--border)',
         }}>
-          <div style={{
-            width: '34px', height: '34px', borderRadius: '9px',
-            background: 'var(--accent-light)', border: '1px solid rgba(37,99,235,0.18)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            <ActiveIcon className="w-4 h-4" style={{ color: 'var(--accent)' }} />
-          </div>
+          {/* Sidebar toggle button for mobile */}
+          <button
+            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+            className="md:hidden p-1 mr-1 hover:bg-slate-100 rounded-lg focus:outline-none"
+            aria-label="Toggle sidebar menu"
+          >
+            <img src="/placeholder.svg" alt="Menu" width={28} height={28} style={{ objectFit: 'contain' }} />
+          </button>
+
           <div>
             <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '16px', color: 'var(--text-primary)' }}>{activeNav.label}</div>
             <div style={{ fontFamily: 'Figtree, sans-serif', fontSize: '12px', color: 'var(--text-muted)' }}>{activeNav.desc}</div>
           </div>
 
-          {/* Breadcrumb path */}
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'IBM Plex Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>
-            <LayoutDashboard className="w-3 h-3" />
-            <span>Learner</span>
-            <ChevronRight className="w-3 h-3" />
-            <span style={{ color: 'var(--accent-text)', fontWeight: 600 }}>{activeNav.label}</span>
-          </div>
         </div>
 
         {/* Inner page content */}
-        <div style={{ flex: 1, padding: '28px', overflowY: 'auto' }}>
+        <div className="dashboard-main-content" style={{ flex: 1, padding: '28px', overflowY: 'auto' }}>
           <div key={tab} className="animate-fade-up">
             {tab === 'overview' && renderOverview()}
             {tab === 'practice' && renderPractice()}

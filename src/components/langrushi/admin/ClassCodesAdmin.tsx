@@ -66,7 +66,7 @@ const ClassCodesAdmin: React.FC = () => {
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>Add one above to get started.</p>
           </div>
         ) : (
-          <div style={{ overflowX: 'auto', margin: '-20px' }}>
+          <div className="table-container" style={{ margin: '-20px' }}>
             <table className="data-table">
               <thead>
                 <tr>

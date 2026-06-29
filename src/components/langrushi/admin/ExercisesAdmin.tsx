@@ -407,83 +407,85 @@ const ExercisesAdmin: React.FC = () => {
 
       {/* Table */}
       <div className="card" style={{ overflow: 'hidden' }}>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th style={{ width: '32%', cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('title')}>Title {sortKey === 'title' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
-              <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('level')}>Level {sortKey === 'level' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
-              <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('category')}>Category {sortKey === 'category' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
-              <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('type')}>Type {sortKey === 'type' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
-              <th style={{ textAlign: 'center', cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('questions')}>Questions {sortKey === 'questions' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
-              <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('access')}>Access {sortKey === 'access' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
-              <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('updatedAt')}>Last Updated {sortKey === 'updatedAt' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
-              <th style={{ textAlign: 'right' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 && filtered === exercises ? (
-              // Loading skeleton
-              Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
-            ) : filtered.length === 0 ? (
+        <div className="table-container">
+          <table className="data-table">
+            <thead>
               <tr>
-                <td colSpan={8}>
-                  <div className="empty-state">
-                    <div className="empty-state-icon"><Search className="w-5 h-5" style={{ color: 'var(--text-muted)' }} /></div>
-                    <p style={{ fontFamily: 'Figtree, sans-serif', fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)', margin: '0 0 4px' }}>No exercises found</p>
-                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>Try adjusting your search or filters.</p>
-                  </div>
-                </td>
+                <th style={{ width: '32%', cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('title')}>Title {sortKey === 'title' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
+                <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('level')}>Level {sortKey === 'level' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
+                <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('category')}>Category {sortKey === 'category' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
+                <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('type')}>Type {sortKey === 'type' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
+                <th style={{ textAlign: 'center', cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('questions')}>Questions {sortKey === 'questions' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
+                <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('access')}>Access {sortKey === 'access' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
+                <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('updatedAt')}>Last Updated {sortKey === 'updatedAt' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
-            ) : paginatedExercises.map(e => (
-              <tr key={e.id}>
-                <td style={{ color: 'var(--text-primary)', fontWeight: 600, maxWidth: '280px' }}>
-                  <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.title}</div>
-                </td>
-                <td><LevelBadge level={e.level} /></td>
-                <td>{e.category}</td>
-                <td>
-                  <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>{e.type}</span>
-                </td>
-                <td style={{ textAlign: 'center', fontFamily: 'IBM Plex Mono, monospace', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  {e.type === 'Interactive' ? (e.questions?.length || 0) : '—'}
-                </td>
-                <td><AccessBadge access={e.access} /></td>
-                <td style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                  {e.updatedAt ? (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Clock className="w-3 h-3" style={{ flexShrink: 0 }} />
-                      {new Date(e.updatedAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}
-                    </span>
-                  ) : '—'}
-                </td>
-                <td style={{ textAlign: 'right' }}>
-                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                    <button
-                      onClick={() => startEdit(e)}
-                      title="Edit"
-                      aria-label="Edit exercise"
-                      style={{ padding: '6px 8px', background: 'var(--accent-light)', border: '1px solid rgba(37,99,235,0.15)', borderRadius: '6px', color: 'var(--accent)', cursor: 'pointer', transition: 'background 180ms ease' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-mid)')}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'var(--accent-light)')}
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => deleteEx(e.id)}
-                      title="Delete"
-                      aria-label="Delete exercise"
-                      style={{ padding: '6px 8px', background: 'var(--danger-bg)', border: '1px solid rgba(220,38,38,0.15)', borderRadius: '6px', color: 'var(--danger)', cursor: 'pointer', transition: 'background 180ms ease' }}
-                      onMouseEnter={ev => (ev.currentTarget.style.background = 'rgba(220,38,38,0.14)')}
-                      onMouseLeave={ev => (ev.currentTarget.style.background = 'var(--danger-bg)')}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.length === 0 && filtered === exercises ? (
+                // Loading skeleton
+                Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={8}>
+                    <div className="empty-state">
+                      <div className="empty-state-icon"><Search className="w-5 h-5" style={{ color: 'var(--text-muted)' }} /></div>
+                      <p style={{ fontFamily: 'Figtree, sans-serif', fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)', margin: '0 0 4px' }}>No exercises found</p>
+                      <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>Try adjusting your search or filters.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : paginatedExercises.map(e => (
+                <tr key={e.id}>
+                  <td style={{ color: 'var(--text-primary)', fontWeight: 600, maxWidth: '280px' }}>
+                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.title}</div>
+                  </td>
+                  <td><LevelBadge level={e.level} /></td>
+                  <td>{e.category}</td>
+                  <td>
+                    <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>{e.type}</span>
+                  </td>
+                  <td style={{ textAlign: 'center', fontFamily: 'IBM Plex Mono, monospace', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {e.type === 'Interactive' ? (e.questions?.length || 0) : '—'}
+                  </td>
+                  <td><AccessBadge access={e.access} /></td>
+                  <td style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                    {e.updatedAt ? (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Clock className="w-3 h-3" style={{ flexShrink: 0 }} />
+                        {new Date(e.updatedAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}
+                      </span>
+                    ) : '—'}
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                      <button
+                        onClick={() => startEdit(e)}
+                        title="Edit"
+                        aria-label="Edit exercise"
+                        style={{ padding: '6px 8px', background: 'var(--accent-light)', border: '1px solid rgba(37,99,235,0.15)', borderRadius: '6px', color: 'var(--accent)', cursor: 'pointer', transition: 'background 180ms ease' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-mid)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'var(--accent-light)')}
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => deleteEx(e.id)}
+                        title="Delete"
+                        aria-label="Delete exercise"
+                        style={{ padding: '6px 8px', background: 'var(--danger-bg)', border: '1px solid rgba(220,38,38,0.15)', borderRadius: '6px', color: 'var(--danger)', cursor: 'pointer', transition: 'background 180ms ease' }}
+                        onMouseEnter={ev => (ev.currentTarget.style.background = 'rgba(220,38,38,0.14)')}
+                        onMouseLeave={ev => (ev.currentTarget.style.background = 'var(--danger-bg)')}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         {/* Pagination Controls */}
         <div style={{

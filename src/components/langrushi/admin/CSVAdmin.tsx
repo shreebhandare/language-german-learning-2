@@ -217,7 +217,7 @@ const CSVAdmin: React.FC = () => {
 
       {/* Export & Import cards */}
       <CollapsibleCard label="Export / Import">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <div className="dashboard-grid-equal">
           <div style={{ background: 'var(--bg-elevated)', borderRadius: '10px', padding: '16px', border: '1px solid var(--border)' }}>
             <p style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)', marginBottom: '4px' }}>Export</p>
             <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '14px' }}>Download all {exercises.length} exercises as CSV.</p>
@@ -375,25 +375,27 @@ const CSVAdmin: React.FC = () => {
                             <Eye className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
                             <span style={{ fontFamily: 'Figtree, sans-serif', fontWeight: 600, fontSize: '12px', color: 'var(--text-primary)' }}>Questions Preview</span>
                           </div>
-                          <table className="data-table">
-                            <thead>
-                              <tr>
-                                <th style={{ width: '28px' }}>#</th>
-                                <th>Question</th><th>Type</th><th>Answer</th><th>Options</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {ex.questions.map((q, qi) => (
-                                <tr key={qi}>
-                                  <td style={{ fontFamily: 'IBM Plex Mono, monospace', fontWeight: 600, color: 'var(--text-muted)', fontSize: '11px' }}>{qi + 1}</td>
-                                  <td style={{ fontWeight: 500, color: 'var(--text-primary)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.text}</td>
-                                  <td><span className="badge badge-blue">{q.type}</span></td>
-                                  <td style={{ fontFamily: 'IBM Plex Mono, monospace', fontWeight: 600, color: 'var(--success)', fontSize: '12px' }}>{q.correctAnswer}</td>
-                                  <td style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{q.type === 'MCQ' ? q.options.join(' | ') : '—'}</td>
+                          <div className="table-container">
+                            <table className="data-table">
+                              <thead>
+                                <tr>
+                                  <th style={{ width: '28px' }}>#</th>
+                                  <th>Question</th><th>Type</th><th>Answer</th><th>Options</th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                              </thead>
+                              <tbody>
+                                {ex.questions.map((q, qi) => (
+                                  <tr key={qi}>
+                                    <td style={{ fontFamily: 'IBM Plex Mono, monospace', fontWeight: 600, color: 'var(--text-muted)', fontSize: '11px' }}>{qi + 1}</td>
+                                    <td style={{ fontWeight: 500, color: 'var(--text-primary)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.text}</td>
+                                    <td><span className="badge badge-blue">{q.type}</span></td>
+                                    <td style={{ fontFamily: 'IBM Plex Mono, monospace', fontWeight: 600, color: 'var(--success)', fontSize: '12px' }}>{q.correctAnswer}</td>
+                                    <td style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{q.type === 'MCQ' ? q.options.join(' | ') : '—'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
                       )}
                     </div>
