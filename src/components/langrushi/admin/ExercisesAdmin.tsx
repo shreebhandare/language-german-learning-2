@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { LEVELS, CATEGORIES, Level, Category, AccessFlag, ExerciseType, Exercise } from '@/lib/langrushi-data';
 import { toast } from '@/components/ui/use-toast';
@@ -78,6 +78,12 @@ const ExercisesAdmin: React.FC = () => {
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<string>('updatedAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter.level, filter.category, filter.search, pageSize]);
 
   const toggleSort = (key: string) => {
     if (sortKey === key) {
@@ -163,6 +169,13 @@ const ExercisesAdmin: React.FC = () => {
     });
     return list;
   }, [filtered, sortKey, sortOrder]);
+
+  const paginatedExercises = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedExercises.slice(start, start + pageSize);
+  }, [sortedExercises, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(sortedExercises.length / pageSize) || 1;
 
   /* ── Form view ─────────────────────────────── */
 
@@ -283,7 +296,15 @@ const ExercisesAdmin: React.FC = () => {
                               <option value="TRUE_FALSE">True/False</option>
                             </Sel>
                           </div>
-                          <div><Label>Correct Answer</Label><Inp value={q.correctAnswer} onChange={e => updQ(i, { correctAnswer: e.target.value })} /></div>
+                          <div>
+                            <Label>Correct Answer</Label>
+                            <Inp value={q.correctAnswer} onChange={e => updQ(i, { correctAnswer: e.target.value })} />
+                            {q.type === 'FILL_BLANK' && (
+                              <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginTop: '4px' }}>
+                                For multiple blanks, separate answers with a pipe (e.g. <code>habe|bin</code>).
+                              </span>
+                            )}
+                          </div>
                         </div>
                         {q.type === 'MCQ' && (
                           <div className="grid grid-cols-2 gap-2">
@@ -413,7 +434,7 @@ const ExercisesAdmin: React.FC = () => {
                   </div>
                 </td>
               </tr>
-            ) : sortedExercises.map(e => (
+            ) : paginatedExercises.map(e => (
               <tr key={e.id}>
                 <td style={{ color: 'var(--text-primary)', fontWeight: 600, maxWidth: '280px' }}>
                   <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.title}</div>
@@ -463,6 +484,87 @@ const ExercisesAdmin: React.FC = () => {
             ))}
           </tbody>
         </table>
+
+        {/* Pagination Controls */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 16px',
+          borderTop: '1px solid var(--border)',
+          background: 'var(--bg-card)',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>
+            <span>Show</span>
+            <select
+              value={pageSize}
+              onChange={e => setPageSize(Number(e.target.value))}
+              className="select"
+              style={{ width: '75px', padding: '4px 6px', height: 'auto', fontSize: '13px' }}
+            >
+              {[10, 25, 50, 100].map(sz => (
+                <option key={sz} value={sz}>{sz}</option>
+              ))}
+            </select>
+            <span>entries</span>
+          </div>
+
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+            Showing {sortedExercises.length === 0 ? 0 : (currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, sortedExercises.length)} of {sortedExercises.length} entries
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="btn-ghost"
+              style={{ padding: '6px 12px', fontSize: '12px', opacity: currentPage === 1 ? 0.5 : 1, cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
+            >
+              Previous
+            </button>
+            
+            {Array.from({ length: totalPages }).map((_, i) => {
+              const pageNum = i + 1;
+              if (totalPages > 5 && Math.abs(currentPage - pageNum) > 1 && pageNum !== 1 && pageNum !== totalPages) {
+                if (pageNum === 2 || pageNum === totalPages - 1) {
+                  return <span key={pageNum} style={{ padding: '0 4px', color: 'var(--text-muted)' }}>...</span>;
+                }
+                return null;
+              }
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={currentPage === pageNum ? "btn-primary" : "btn-ghost"}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    minWidth: '32px',
+                    height: '32px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '6px',
+                    fontWeight: currentPage === pageNum ? 700 : 400
+                  }}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="btn-ghost"
+              style={{ padding: '6px 12px', fontSize: '12px', opacity: currentPage === totalPages ? 0.5 : 1, cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

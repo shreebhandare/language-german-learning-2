@@ -1,6 +1,13 @@
 feat(settings): support default/inherited quiz feedback settings and unify vocabulary
+feat(quiz): persist exercise progress and active exercise state across refreshes
+feat(admin): implement table pagination in ExercisesAdmin list view
 
+Changes:
 - Aligned the global setting value from 'never' to 'none' in SettingsAdmin and AppContextType to unify vocabulary with the exercise-level display mode options.
 - Added a "Default (Use global setting)" option to the Answer Display dropdown in the exercise editor form (ExercisesAdmin).
 - Updated db.ts to fetch exercises without a custom feedback setting with an empty string ('') instead of defaulting to 'instant'.
 - Configured exercise database updates/inserts to save null when the default option is chosen so it inherits the global setting correctly.
+- Persisted activeExerciseId state in localStorage inside AppContext so refreshes keep the user inside their current exercise.
+- Implemented localStorage persistence for all QuizPlayer states (queue index, answers, submission status, hints, scores, timer) so refreshing or returning to the exercise resumes progress exactly where the user left off.
+- Configured the completed results view to clear the stored progress on clicking "Back to Library" or reset it on clicking "Retake".
+- Implemented premium table pagination inside ExercisesAdmin list view with selectable page sizes (10, 25, 50, 100), descriptive range stats ("Showing X to Y of Z entries"), page numbers, and responsive Previous/Next buttons. Added auto-reset behavior back to page 1 whenever search, filters, or page sizes change.

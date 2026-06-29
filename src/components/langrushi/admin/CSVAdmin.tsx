@@ -22,50 +22,76 @@ function escapeCSVField(field: any): string {
   return str;
 }
 
-function parseCSVLine(line: string): string[] {
-  const result: string[] = [];
-  let current = '';
+function parseCSV(text: string): ParsedExercise[] {
+  const map = new Map<string, ParsedExercise>();
+  
+  // Custom CSV parser that handles newlines inside quotes correctly
+  const rows: string[][] = [];
+  let currentField = '';
+  let currentRow: string[] = [];
   let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
+  
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const nextCh = text[i + 1];
+    
     if (ch === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
+      if (inQuotes && nextCh === '"') {
+        currentField += '"';
         i++; // Skip the second quote
       } else {
         inQuotes = !inQuotes;
       }
     } else if (ch === ',' && !inQuotes) {
-      result.push(current.trim());
-      current = '';
+      currentRow.push(currentField.trim());
+      currentField = '';
+    } else if ((ch === '\r' || ch === '\n') && !inQuotes) {
+      if (ch === '\r' && nextCh === '\n') {
+        i++; // Skip \n
+      }
+      currentRow.push(currentField.trim());
+      rows.push(currentRow);
+      currentRow = [];
+      currentField = '';
     } else {
-      current += ch;
+      currentField += ch;
     }
   }
-  result.push(current.trim());
-  return result;
-}
+  // Push last field/row if any
+  if (currentRow.length > 0 || currentField.trim()) {
+    currentRow.push(currentField.trim());
+    rows.push(currentRow);
+  }
 
-function parseCSV(text: string): ParsedExercise[] {
-  const lines = text.split('\n').slice(1).filter(l => l.trim());
-  const map = new Map<string, ParsedExercise>();
-  lines.forEach((line, i) => {
-    const cols = parseCSVLine(line);
+  // The first row is the header
+  const dataRows = rows.slice(1);
+
+  dataRows.forEach((cols, i) => {
+    // Skip completely empty rows (e.g. all empty or just commas)
+    const isAllEmpty = cols.every(col => !col.trim());
+    if (isAllEmpty) return;
+
     const rowErrors: string[] = [];
-    const rowNum = i + 2;
-    const level = cols[0] || ''; const category = cols[1] || ''; const subPart = cols[2] || '';
-    const title = cols[3] || ''; const exType = cols[4] || 'Interactive';
-    const qText = cols[5] || ''; const qType = cols[6] || 'MCQ';
-    const correctAnswer = cols[7] || '';
-    const opt1 = cols[8] || ''; const opt2 = cols[9] || '';
-    const opt3 = cols[10] || ''; const opt4 = cols[11] || '';
-    const mediaUrl = cols[12] || ''; const hint = cols[13] || '';
-    const explanation = cols[14] || ''; const access = cols[15] || 'FREE_ALL';
-    const transcript = cols[16] || '';
-    const guidance = cols[17] || '';
-    const modelAnswer = cols[18] || '';
+    const rowNum = i + 2; // +2 because header is row 1
+    
+    const parsedLength = cols.length;
+    while (cols.length < 19) {
+      cols.push('');
+    }
 
-    if (cols.length < 8) rowErrors.push(`Row ${rowNum}: Not enough columns (${cols.length}/19)`);
+    const level = cols[0]; const category = cols[1]; const subPart = cols[2];
+    const title = cols[3]; const exType = cols[4] || 'Interactive';
+    const qText = cols[5]; const qType = cols[6] || 'MCQ';
+    const correctAnswer = cols[7];
+    const opt1 = cols[8]; const opt2 = cols[9];
+    const opt3 = cols[10]; const opt4 = cols[11];
+    const mediaUrl = cols[12]; const hint = cols[13];
+    const explanation = cols[14]; const access = cols[15] || 'FREE_ALL';
+    const transcript = cols[16];
+    const guidance = cols[17];
+    const modelAnswer = cols[18];
+
+    if (parsedLength < 8) rowErrors.push(`Row ${rowNum}: Not enough columns (${parsedLength}/19)`);
     if (!LEVELS.includes(level as any)) rowErrors.push(`Row ${rowNum}: Invalid level "${level}"`);
     if (!['Listening', 'Writing', 'Reading', 'Grammar', 'Games'].includes(category)) rowErrors.push(`Row ${rowNum}: Invalid category "${category}"`);
     if (!title) rowErrors.push(`Row ${rowNum}: Missing exercise title`);
@@ -73,7 +99,17 @@ function parseCSV(text: string): ParsedExercise[] {
       if (!qText) rowErrors.push(`Row ${rowNum}: Missing question text`);
       if (!correctAnswer) rowErrors.push(`Row ${rowNum}: Missing correct answer`);
       if (qType === 'MCQ' && !opt1 && !opt2) rowErrors.push(`Row ${rowNum}: MCQ needs at least 2 options`);
-      if (!['MCQ', 'FILL_BLANK', 'TRUE_FALSE'].includes(qType)) rowErrors.push(`Row ${rowNum}: Invalid question type "${qType}"`);
+      if (!['MCQ', 'FILL_BLANK', 'TRUE_FALSE'].includes(qType)) {
+        rowErrors.push(`Row ${rowNum}: Invalid question type "${qType}"`);
+      } else if (qType === 'FILL_BLANK') {
+        const blanks = (qText.match(/_{3,}|\[blank\]/g) || []).length;
+        if (blanks > 1) {
+          const ansCount = correctAnswer.split('|').length;
+          if (ansCount !== blanks) {
+            rowErrors.push(`Row ${rowNum}: Question text has ${blanks} blanks, but correct_answer has ${ansCount} pipe-separated values ('${correctAnswer}')`);
+          }
+        }
+      }
     }
 
     const key = `${level}|${category}|${title}`;

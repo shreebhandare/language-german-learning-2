@@ -4,7 +4,7 @@
 -- ============================================
 
 -- 1. Exercises
-CREATE TABLE IF NOT EXISTS langrushi_exercises (
+CREATE TABLE IF NOT EXISTS app_exercises (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
   level TEXT NOT NULL CHECK (level IN ('A1', 'A2', 'B1', 'B2')),
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS langrushi_exercises (
 );
 
 -- 2. User profiles
-CREATE TABLE IF NOT EXISTS langrushi_profiles (
+CREATE TABLE IF NOT EXISTS shared_profiles (
   id TEXT PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
@@ -34,9 +34,9 @@ CREATE TABLE IF NOT EXISTS langrushi_profiles (
 );
 
 -- 3. Quiz attempts
-CREATE TABLE IF NOT EXISTS langrushi_attempts (
+CREATE TABLE IF NOT EXISTS app_attempts (
   id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES langrushi_profiles(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES shared_profiles(id) ON DELETE CASCADE,
   exercise_id TEXT NOT NULL,
   score INTEGER NOT NULL DEFAULT 0,
   total INTEGER NOT NULL DEFAULT 0,
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS langrushi_attempts (
 );
 
 -- 4. Class codes
-CREATE TABLE IF NOT EXISTS langrushi_class_codes (
+CREATE TABLE IF NOT EXISTS app_class_codes (
   id TEXT PRIMARY KEY,
   code TEXT UNIQUE NOT NULL,
   level TEXT NOT NULL CHECK (level IN ('A1', 'A2', 'B1', 'B2')),
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS langrushi_class_codes (
 );
 
 -- 5. Coupons
-CREATE TABLE IF NOT EXISTS langrushi_coupons (
+CREATE TABLE IF NOT EXISTS app_coupons (
   id TEXT PRIMARY KEY,
   code TEXT UNIQUE NOT NULL,
   discount_type TEXT NOT NULL CHECK (discount_type IN ('percent', 'fixed')),
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS langrushi_coupons (
 );
 
 -- 6. Settings (key-value store)
-CREATE TABLE IF NOT EXISTS langrushi_settings (
+CREATE TABLE IF NOT EXISTS app_settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
@@ -75,45 +75,45 @@ CREATE TABLE IF NOT EXISTS langrushi_settings (
 -- ============================================
 -- Indexes for performance
 -- ============================================
-CREATE INDEX IF NOT EXISTS idx_attempts_user ON langrushi_attempts(user_id);
-CREATE INDEX IF NOT EXISTS idx_attempts_exercise ON langrushi_attempts(exercise_id);
-CREATE INDEX IF NOT EXISTS idx_attempts_date ON langrushi_attempts(date DESC);
-CREATE INDEX IF NOT EXISTS idx_profiles_email ON langrushi_profiles(email);
-CREATE INDEX IF NOT EXISTS idx_exercises_level ON langrushi_exercises(level);
+CREATE INDEX IF NOT EXISTS idx_app_attempts_user ON app_attempts(user_id);
+CREATE INDEX IF NOT EXISTS idx_app_attempts_exercise ON app_attempts(exercise_id);
+CREATE INDEX IF NOT EXISTS idx_app_attempts_date ON app_attempts(date DESC);
+CREATE INDEX IF NOT EXISTS idx_shared_profiles_email ON shared_profiles(email);
+CREATE INDEX IF NOT EXISTS idx_app_exercises_level ON app_exercises(level);
 
 -- ============================================
 -- Row Level Security (RLS) - Allow public access for anon key
 -- (Since this is a demo platform using anon key from frontend)
 -- ============================================
-ALTER TABLE langrushi_exercises ENABLE ROW LEVEL SECURITY;
-ALTER TABLE langrushi_profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE langrushi_attempts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE langrushi_class_codes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE langrushi_coupons ENABLE ROW LEVEL SECURITY;
-ALTER TABLE langrushi_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_exercises ENABLE ROW LEVEL SECURITY;
+ALTER TABLE shared_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_attempts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_class_codes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_coupons ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
 
 -- Allow all operations for anon users (demo mode)
-DROP POLICY IF EXISTS "Allow all for exercises" ON langrushi_exercises;
-CREATE POLICY "Allow all for exercises" ON langrushi_exercises FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for exercises" ON app_exercises;
+CREATE POLICY "Allow all for exercises" ON app_exercises FOR ALL USING (true) WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Allow all for profiles" ON langrushi_profiles;
-CREATE POLICY "Own profile read" ON langrushi_profiles FOR SELECT USING (auth.uid()::text = id);
-CREATE POLICY "Own profile update" ON langrushi_profiles FOR UPDATE USING (auth.uid()::text = id);
-CREATE POLICY "Admin full access" ON langrushi_profiles FOR ALL USING (
-  EXISTS (SELECT 1 FROM langrushi_profiles WHERE id = auth.uid()::text AND tier = 'admin')
+DROP POLICY IF EXISTS "Allow all for profiles" ON shared_profiles;
+CREATE POLICY "Own profile read" ON shared_profiles FOR SELECT USING (auth.uid()::text = id);
+CREATE POLICY "Own profile update" ON shared_profiles FOR UPDATE USING (auth.uid()::text = id);
+CREATE POLICY "Admin full access" ON shared_profiles FOR ALL USING (
+  EXISTS (SELECT 1 FROM shared_profiles WHERE id = auth.uid()::text AND tier = 'admin')
 );
 
-DROP POLICY IF EXISTS "Allow all for attempts" ON langrushi_attempts;
-CREATE POLICY "Allow all for attempts" ON langrushi_attempts FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for attempts" ON app_attempts;
+CREATE POLICY "Allow all for attempts" ON app_attempts FOR ALL USING (true) WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Allow all for class_codes" ON langrushi_class_codes;
-CREATE POLICY "Allow all for class_codes" ON langrushi_class_codes FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for class_codes" ON app_class_codes;
+CREATE POLICY "Allow all for class_codes" ON app_class_codes FOR ALL USING (true) WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Allow all for coupons" ON langrushi_coupons;
-CREATE POLICY "Allow all for coupons" ON langrushi_coupons FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for coupons" ON app_coupons;
+CREATE POLICY "Allow all for coupons" ON app_coupons FOR ALL USING (true) WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Allow all for settings" ON langrushi_settings;
-CREATE POLICY "Allow all for settings" ON langrushi_settings FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for settings" ON app_settings;
+CREATE POLICY "Allow all for settings" ON app_settings FOR ALL USING (true) WITH CHECK (true);
 
 -- ============================================
 -- Trigger to auto-create profile on signup
@@ -121,7 +121,7 @@ CREATE POLICY "Allow all for settings" ON langrushi_settings FOR ALL USING (true
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public.langrushi_profiles (id, email, name, tier)
+  INSERT INTO public.shared_profiles (id, email, name, tier)
   VALUES (
     NEW.id::text,
     NEW.email,
@@ -141,13 +141,13 @@ CREATE TRIGGER on_auth_user_created
 -- ============================================
 -- Default settings
 -- ============================================
-INSERT INTO langrushi_settings (key, value) VALUES ('guest_quota', '2') ON CONFLICT (key) DO NOTHING;
-INSERT INTO langrushi_settings (key, value) VALUES ('registered_quota', '10') ON CONFLICT (key) DO NOTHING;
+INSERT INTO app_settings (key, value) VALUES ('guest_quota', '2') ON CONFLICT (key) DO NOTHING;
+INSERT INTO app_settings (key, value) VALUES ('registered_quota', '10') ON CONFLICT (key) DO NOTHING;
 
 -- ============================================
 -- Seed: Class Codes
 -- ============================================
-INSERT INTO langrushi_class_codes (id, code, level, max_uses, used, active, expiry) VALUES
+INSERT INTO app_class_codes (id, code, level, max_uses, used, active, expiry) VALUES
   ('cc1', 'GERMAN-A1-MAY2025', 'A1', 50, 12, true, '2025-12-31'),
   ('cc2', 'GERMAN-B1-MAY2025', 'B1', 30, 8, true, '2025-12-31'),
   ('cc3', 'GERMAN-B2-OCT2025', 'B2', 25, 3, true, NULL)
@@ -156,7 +156,7 @@ ON CONFLICT (id) DO NOTHING;
 -- ============================================
 -- Seed: Coupons
 -- ============================================
-INSERT INTO langrushi_coupons (id, code, discount_type, value, max_uses, used, active) VALUES
+INSERT INTO app_coupons (id, code, discount_type, value, max_uses, used, active) VALUES
   ('co1', 'WELCOME20', 'percent', 20, NULL, 5, true),
   ('co2', 'STUDENT10', 'fixed', 10, 100, 23, true),
   ('co3', 'EARLYBIRD', 'percent', 30, NULL, 0, false)
@@ -165,7 +165,7 @@ ON CONFLICT (id) DO NOTHING;
 -- ============================================
 -- Seed: Sample Exercises (18 exercises across A1-B2)
 -- ============================================
-INSERT INTO langrushi_exercises (id, title, level, category, sub_part, type, access, media_url, transcript, questions, prompt, guidance, model_answer) VALUES
+INSERT INTO app_exercises (id, title, level, category, sub_part, type, access, media_url, transcript, questions, prompt, guidance, model_answer) VALUES
 
 -- A1 Listening
 ('e1', 'Am Bahnhof', 'A1', 'Listening', 'Teil 1', 'Interactive', 'FREE_ALL',
@@ -278,7 +278,7 @@ INSERT INTO langrushi_exercises (id, title, level, category, sub_part, type, acc
 -- Reading Exercises (Seeded)
 ('e19', 'Ein Tag in Berlin', 'A1', 'Reading', 'Teil 1', 'Interactive', 'FREE_ALL',
  NULL,
- 'Hallo, ich heiße David. Ich wohne in Berlin. Berlin ist eine große Stadt in Deutschland. Mein Tag beginnt früh. Um 7 Uhr trinke ich Kaffee und esse Brot. Danach gehe ich im Park spazieren. Am Nachmittag treffe ich meine Freunde im Café. Wir sprechen Deutsch und trinken Tee. Am Abend bleibe ich zu Hause und lese ein Buch. Ich gehe um 22 Uhr ins Bett.',
+ 'Hallo, ich heiße David. Ich wohne in Berlin. Berlin ist eine große Stadt in Deutschland. Mein Tag beginnt früh. Um 7 Uhr trinke ich Kaffee und esse Brot. Danach gehe ich im Park spazieren. Am Nachmittag trehme ich meine Freunde im Café. Wir sprechen Deutsch und trinken Tee. Am Abend bleibe ich zu Hause und lese ein Buch. Ich gehe um 22 Uhr ins Bett.',
  '[{"id":"q1","text":"Wo wohnt David?","type":"MCQ","options":["In München","In Berlin","In Frankfurt","In Hamburg"],"correctAnswer":"In Berlin","explanation":"David sagt: \"Ich wohne in Berlin.\""},{"id":"q2","text":"David trinkt am Morgen _____.","type":"FILL_BLANK","correctAnswer":"Kaffee","hint":"Kaffee oder Tee?","explanation":"David trinkt Kaffee um 7 Uhr."},{"id":"q3","text":"David trifft seine Freunde am Vormittag.","type":"TRUE_FALSE","options":["True","False"],"correctAnswer":"False","explanation":"Er trifft seine Freunde am Nachmittag."}]',
  NULL, NULL, NULL),
 
@@ -298,9 +298,9 @@ INSERT INTO langrushi_exercises (id, title, level, category, sub_part, type, acc
 ON CONFLICT (id) DO NOTHING;
 
 -- === 7. Metadata Column & Analytics Table ===
-ALTER TABLE langrushi_exercises ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE app_exercises ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS langrushi_analytics (
+CREATE TABLE IF NOT EXISTS app_analytics (
   id TEXT PRIMARY KEY,
   visitor_id TEXT NOT NULL,
   user_email TEXT,
@@ -310,13 +310,12 @@ CREATE TABLE IF NOT EXISTS langrushi_analytics (
 );
 
 -- Enable RLS for Analytics
-ALTER TABLE langrushi_analytics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_analytics ENABLE ROW LEVEL SECURITY;
 
 -- Allow anonymous inserts (GDPR consented logs)
-DROP POLICY IF EXISTS "Allow anonymous logs inserts" ON langrushi_analytics;
-CREATE POLICY "Allow anonymous logs inserts" ON langrushi_analytics FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow anonymous logs inserts" ON app_analytics;
+CREATE POLICY "Allow anonymous logs inserts" ON app_analytics FOR INSERT WITH CHECK (true);
 
 -- Allow authenticated users (Admins) to read
-DROP POLICY IF EXISTS "Allow admin read" ON langrushi_analytics;
-CREATE POLICY "Allow admin read" ON langrushi_analytics FOR SELECT TO authenticated USING (true);
-
+DROP POLICY IF EXISTS "Allow admin read" ON app_analytics;
+CREATE POLICY "Allow admin read" ON app_analytics FOR SELECT TO authenticated USING (true);

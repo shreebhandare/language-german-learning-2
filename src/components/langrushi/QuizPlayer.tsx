@@ -15,17 +15,103 @@ const QuizPlayer: React.FC<Props> = ({ exercise, onClose }) => {
   const answerDisplayMode = exercise.answerDisplayMode || globalAnswerDisplayMode;
 
   const questions = exercise.questions || [];
+  const progressKey = `langrushi_progress_${exercise.id}`;
+
   const [queue, setQueue] = useState<number[]>(() => questions.map((_, i) => i));
-  const [queueIdx, setQueueIdx] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [submitted, setSubmitted] = useState(false);
-  const [showHint, setShowHint] = useState(false);
-  const [showResults, setShowResults] = useState(false);
-  const [scores, setScores] = useState<Record<string, boolean>>({});
-  const [startTime] = useState(Date.now());
+
+  const [queueIdx, setQueueIdx] = useState<number>(() => {
+    const saved = localStorage.getItem(progressKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.queueIdx === 'number') return parsed.queueIdx;
+      } catch (e) {}
+    }
+    return 0;
+  });
+
+  const [answers, setAnswers] = useState<Record<string, string>>(() => {
+    const saved = localStorage.getItem(progressKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.answers) return parsed.answers;
+      } catch (e) {}
+    }
+    return {};
+  });
+
+  const [submitted, setSubmitted] = useState<boolean>(() => {
+    const saved = localStorage.getItem(progressKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.submitted === 'boolean') return parsed.submitted;
+      } catch (e) {}
+    }
+    return false;
+  });
+
+  const [showHint, setShowHint] = useState<boolean>(() => {
+    const saved = localStorage.getItem(progressKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.showHint === 'boolean') return parsed.showHint;
+      } catch (e) {}
+    }
+    return false;
+  });
+
+  const [showResults, setShowResults] = useState<boolean>(() => {
+    const saved = localStorage.getItem(progressKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.showResults === 'boolean') return parsed.showResults;
+      } catch (e) {}
+    }
+    return false;
+  });
+
+  const [scores, setScores] = useState<Record<string, boolean>>(() => {
+    const saved = localStorage.getItem(progressKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.scores) return parsed.scores;
+      } catch (e) {}
+    }
+    return {};
+  });
+
+  const [startTime] = useState<number>(() => {
+    const saved = localStorage.getItem(progressKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.startTime) return parsed.startTime;
+      } catch (e) {}
+    }
+    return Date.now();
+  });
+
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [finishConfirmText, setFinishConfirmText] = useState('');
   const [showTranscript, setShowTranscript] = useState(false);
+
+  useEffect(() => {
+    const state = {
+      queueIdx,
+      answers,
+      submitted,
+      showHint,
+      showResults,
+      scores,
+      startTime
+    };
+    localStorage.setItem(progressKey, JSON.stringify(state));
+  }, [queueIdx, answers, submitted, showHint, showResults, scores, startTime, progressKey]);
   
   if (exercise.type === 'Passive') return <PassiveExercise exercise={exercise} onClose={onClose} isCourseMatch={user?.tier === 'course' && user.courseLevel === exercise.level} />;
 
@@ -35,10 +121,109 @@ const QuizPlayer: React.FC<Props> = ({ exercise, onClose }) => {
   const q = questions[qIdx];
   const totalUnique = questions.length;
   const currentAnswer = answers[q.id] || '';
+  const blanks = q ? (q.text.match(/_{3,}|\[blank\]/g) || []).length : 0;
+  const isMultiBlank = q ? (q.type === 'FILL_BLANK' && blanks > 1) : false;
+
 
   const checkAnswer = (question: Question, val: string) => {
-    if (question.type === 'FILL_BLANK') return val.trim().toLowerCase() === question.correctAnswer.trim().toLowerCase();
+    if (question.type === 'FILL_BLANK') {
+      const blanks = (question.text.match(/_{3,}|\[blank\]/g) || []).length;
+      if (blanks > 1) {
+        const correctParts = question.correctAnswer.split('|');
+        const userParts = val.split('|');
+        return correctParts.every((correctPart, idx) => {
+          const userPart = userParts[idx] || '';
+          return userPart.trim().toLowerCase() === correctPart.trim().toLowerCase();
+        });
+      } else {
+        const correctAlternatives = question.correctAnswer.split('|');
+        return correctAlternatives.some(
+          alt => val.trim().toLowerCase() === alt.trim().toLowerCase()
+        );
+      }
+    }
     return val === question.correctAnswer;
+  };
+
+  const isCorrectPart = (question: Question, val: string, index: number) => {
+    const correctParts = question.correctAnswer.split('|');
+    const correctVal = correctParts[index] || '';
+    return val.trim().toLowerCase() === correctVal.trim().toLowerCase();
+  };
+
+  const renderQuestionText = (question: Question) => {
+    if (question.type !== 'FILL_BLANK') {
+      return question.text;
+    }
+
+    const blanks = question.text.match(/_{3,}|\[blank\]/g);
+    if (!blanks || blanks.length <= 1) {
+      return question.text;
+    }
+
+    const parts = question.text.split(/_{3,}|\[blank\]/);
+    const currentAnswers = (answers[question.id] || '').split('|');
+
+    return (
+      <span className="flex flex-wrap items-center justify-center gap-x-2 gap-y-3 leading-loose text-xl md:text-2xl font-bold font-serif text-slate-800">
+        {parts.map((part, index) => {
+          const isLast = index === parts.length - 1;
+          const answerVal = currentAnswers[index] || '';
+
+          return (
+            <React.Fragment key={index}>
+              <span>{part}</span>
+              {!isLast && (
+                question.options && question.options.filter(o => o.trim()).length > 0 ? (
+                  <select
+                    value={answerVal}
+                    onChange={(e) => {
+                      const newAnswers = [...currentAnswers];
+                      while (newAnswers.length <= index) newAnswers.push('');
+                      newAnswers[index] = e.target.value;
+                      setAnswers(prev => ({ ...prev, [question.id]: newAnswers.join('|') }));
+                    }}
+                    disabled={submitted}
+                    className={`inline-block h-10 px-2 text-base font-medium rounded-lg border-2 outline-none transition-all ${
+                      submitted
+                        ? (isCorrectPart(question, answerVal, index)
+                          ? 'border-green-500 bg-green-50 text-green-900'
+                          : 'border-red-500 bg-red-50 text-red-900')
+                        : 'border-slate-300 focus:border-blue-500 bg-white'
+                    }`}
+                  >
+                    <option value="" disabled>Select...</option>
+                    {question.options.filter(o => o.trim()).map((opt, i) => (
+                      <option key={i} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={answerVal}
+                    onChange={(e) => {
+                      const newAnswers = [...currentAnswers];
+                      while (newAnswers.length <= index) newAnswers.push('');
+                      newAnswers[index] = e.target.value;
+                      setAnswers(prev => ({ ...prev, [question.id]: newAnswers.join('|') }));
+                    }}
+                    disabled={submitted}
+                    placeholder={`blank ${index + 1}`}
+                    className={`inline-block h-10 px-3 text-center font-sans font-medium text-lg rounded-lg border-2 w-32 outline-none transition-all ${
+                      submitted
+                        ? (isCorrectPart(question, answerVal, index)
+                          ? 'border-green-500 bg-green-50 text-green-900'
+                          : 'border-red-500 bg-red-50 text-red-900')
+                        : 'border-slate-300 focus:border-blue-500 bg-white'
+                    }`}
+                  />
+                )
+              )}
+            </React.Fragment>
+          );
+        })}
+      </span>
+    );
   };
 
   const isCorrect = () => checkAnswer(q, currentAnswer);
@@ -152,7 +337,10 @@ const QuizPlayer: React.FC<Props> = ({ exercise, onClose }) => {
               <Button variant="outline" size="lg" onClick={() => { setQueue(questions.map((_, i) => i)); setQueueIdx(0); setAnswers({}); setScores({}); setSubmitted(false); setShowResults(false); }}>
                 <RotateCcw className="w-4 h-4 mr-2" /> Retake
               </Button>
-              <Button size="lg" className="bg-[#0a192f] hover:bg-[#020c1b]" onClick={onClose}>
+              <Button size="lg" className="bg-[#0a192f] hover:bg-[#020c1b]" onClick={() => {
+                localStorage.removeItem(progressKey);
+                onClose();
+              }}>
                 <ArrowLeft className="w-4 h-4 mr-2" /> Back to Library
               </Button>
             </div>
@@ -164,6 +352,7 @@ const QuizPlayer: React.FC<Props> = ({ exercise, onClose }) => {
                 <div className="space-y-6">
                   {questions.map((question, idx) => {
                     const ans = answers[question.id] || '';
+                    const formattedAns = ans.split('|').map(s => s.trim()).filter(Boolean).join(', ');
                     const isQCorrect = !!scores[question.id];
                     return (
                       <div key={question.id} className={`p-5 rounded-xl border ${isQCorrect ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'}`}>
@@ -172,13 +361,13 @@ const QuizPlayer: React.FC<Props> = ({ exercise, onClose }) => {
                           <div>
                             <span className="text-slate-500 block mb-1">Your answer:</span>
                             <div className={`font-medium ${isQCorrect ? 'text-green-700' : 'text-red-700'}`}>
-                              {ans || <span className="italic opacity-50">Skipped/No answer</span>}
+                              {formattedAns || <span className="italic opacity-50">Skipped/No answer</span>}
                             </div>
                           </div>
                           {!isQCorrect && (
                             <div>
                               <span className="text-slate-500 block mb-1">Correct answer:</span>
-                              <div className="font-bold text-green-700">{question.correctAnswer}</div>
+                              <div className="font-bold text-green-700">{question.correctAnswer.split('|').join(', ')}</div>
                             </div>
                           )}
                         </div>
@@ -202,7 +391,7 @@ const QuizPlayer: React.FC<Props> = ({ exercise, onClose }) => {
   const questionElement = (
     <div className="w-full">
       <h2 className="text-xl md:text-2xl font-bold text-center mb-8 leading-relaxed font-serif">
-        {q.text}
+        {renderQuestionText(q)}
       </h2>
 
       {/* MCQ */}
@@ -240,30 +429,32 @@ const QuizPlayer: React.FC<Props> = ({ exercise, onClose }) => {
       {/* Fill in the Blank */}
       {q.type === 'FILL_BLANK' && (
         <div className="w-full">
-          {(q.options && q.options.filter(o => o.trim()).length > 0) ? (
-            <select
-              value={currentAnswer}
-              onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
-              disabled={submitted}
-              className={`w-full h-14 px-4 text-center text-lg font-medium rounded-xl border-2 outline-none ${submitted ? (isCorrect() ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50') : 'border-slate-200 focus:border-blue-500'}`}
-            >
-              <option value="" disabled>Select an option...</option>
-              {q.options.filter(o => o.trim()).map((opt, i) => (
-                <option key={i} value={opt}>{opt}</option>
-              ))}
-            </select>
-          ) : (
-            <Input 
-              value={currentAnswer} 
-              onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))} 
-              disabled={submitted} 
-              placeholder="Type your answer..." 
-              className={`h-14 text-center text-lg rounded-xl border-2 ${submitted ? (isCorrect() ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50') : 'border-slate-200 focus-visible:border-blue-500 focus-visible:ring-0'}`} 
-            />
+          {!isMultiBlank && (
+            (q.options && q.options.filter(o => o.trim()).length > 0) ? (
+              <select
+                value={currentAnswer}
+                onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                disabled={submitted}
+                className={`w-full h-14 px-4 text-center text-lg font-medium rounded-xl border-2 outline-none ${submitted ? (isCorrect() ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50') : 'border-slate-200 focus:border-blue-500'}`}
+              >
+                <option value="" disabled>Select an option...</option>
+                {q.options.filter(o => o.trim()).map((opt, i) => (
+                  <option key={i} value={opt}>{opt}</option>
+                ))}
+              </select>
+            ) : (
+              <Input 
+                value={currentAnswer} 
+                onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))} 
+                disabled={submitted} 
+                placeholder="Type your answer..." 
+                className={`h-14 text-center text-lg rounded-xl border-2 ${submitted ? (isCorrect() ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50') : 'border-slate-200 focus-visible:border-blue-500 focus-visible:ring-0'}`} 
+              />
+            )
           )}
           {submitted && !isCorrect() && (
             <div className="mt-4 text-center text-green-600 font-medium">
-              Correct answer: <strong className="font-bold">{q.correctAnswer}</strong>
+              Correct answer: <strong className="font-bold">{q.correctAnswer.split('|').join(', ')}</strong>
             </div>
           )}
         </div>

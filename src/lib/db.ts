@@ -11,7 +11,7 @@ export async function hashPassword(password: string): Promise<string> {
 
 // === Exercises ===
 export async function fetchExercises(): Promise<Exercise[]> {
-  const { data, error } = await supabase.from('langrushi_exercises').select('*').order('id');
+  const { data, error } = await supabase.from('app_exercises').select('*').order('id');
   if (error) { console.error(error); return []; }
   return (data || []).map((r: any) => ({
     id: r.id,
@@ -34,7 +34,7 @@ export async function fetchExercises(): Promise<Exercise[]> {
 }
 
 export async function insertExercise(ex: Exercise): Promise<void> {
-  await supabase.from('langrushi_exercises').insert({
+  await supabase.from('app_exercises').insert({
     id: ex.id, title: ex.title, level: ex.level, category: ex.category,
     sub_part: ex.subPart, type: ex.type, access: ex.access,
     media_url: ex.mediaUrl || null, transcript: ex.transcript || null,
@@ -63,17 +63,17 @@ export async function updateExercise(id: string, ex: Partial<Exercise>): Promise
   if (ex.guidance !== undefined) patch.guidance = ex.guidance || null;
   if (ex.modelAnswer !== undefined) patch.model_answer = ex.modelAnswer || null;
   patch.updated_at = new Date().toISOString();
-  const { error } = await supabase.from('langrushi_exercises').update(patch).eq('id', id);
+  const { error } = await supabase.from('app_exercises').update(patch).eq('id', id);
   if (error) console.error('[db] updateExercise failed:', error);
 }
 
 export async function deleteExercise(id: string): Promise<void> {
-  await supabase.from('langrushi_exercises').delete().eq('id', id);
+  await supabase.from('app_exercises').delete().eq('id', id);
 }
 
 // === Profiles ===
 export async function fetchAllProfiles(): Promise<any[]> {
-  const { data } = await supabase.from('langrushi_profiles').select('*').order('registered_at', { ascending: false });
+  const { data } = await supabase.from('shared_profiles').select('*').order('registered_at', { ascending: false });
   return (data || []).map((r: any) => ({
     id: r.id, email: r.email, name: r.name, tier: r.tier,
     courseLevel: r.course_level || undefined,
@@ -82,7 +82,7 @@ export async function fetchAllProfiles(): Promise<any[]> {
 }
 
 export async function fetchProfileById(id: string): Promise<any | null> {
-  const { data, error } = await supabase.from('langrushi_profiles').select('*').eq('id', id).maybeSingle();
+  const { data, error } = await supabase.from('shared_profiles').select('*').eq('id', id).maybeSingle();
   if (error) {
     console.error('Error fetching profile:', error);
     return null;
@@ -99,26 +99,26 @@ export async function fetchProfileById(id: string): Promise<any | null> {
 }
 
 export async function updateProfileTier(id: string, tier: string, courseLevel?: string): Promise<void> {
-  await supabase.from('langrushi_profiles').update({ tier, course_level: courseLevel || null }).eq('id', id);
+  await supabase.from('shared_profiles').update({ tier, course_level: courseLevel || null }).eq('id', id);
 }
 
 // === Attempts ===
 export async function fetchAttemptsForUser(userId: string): Promise<any[]> {
-  const { data } = await supabase.from('langrushi_attempts').select('*').eq('user_id', userId).order('date', { ascending: false });
+  const { data } = await supabase.from('app_attempts').select('*').eq('user_id', userId).order('date', { ascending: false });
   return (data || []).map((a: any) => ({
     exerciseId: a.exercise_id, score: a.score, total: a.total, date: a.date,
   }));
 }
 
 export async function insertAttempt(userId: string, exerciseId: string, score: number, total: number): Promise<void> {
-  await supabase.from('langrushi_attempts').insert({
+  await supabase.from('app_attempts').insert({
     id: 'a' + Date.now() + Math.random().toString(36).slice(2, 6),
     user_id: userId, exercise_id: exerciseId, score, total,
   });
 }
 
 export async function fetchAllAttempts(): Promise<any[]> {
-  const { data } = await supabase.from('langrushi_attempts').select('*').order('date', { ascending: false });
+  const { data } = await supabase.from('app_attempts').select('*').order('date', { ascending: false });
   return (data || []).map((a: any) => ({
     userId: a.user_id, exerciseId: a.exercise_id, score: a.score, total: a.total, date: a.date,
   }));
@@ -126,7 +126,7 @@ export async function fetchAllAttempts(): Promise<any[]> {
 
 // === Class Codes ===
 export async function fetchClassCodes(): Promise<ClassCode[]> {
-  const { data } = await supabase.from('langrushi_class_codes').select('*').order('code');
+  const { data } = await supabase.from('app_class_codes').select('*').order('code');
   return (data || []).map((r: any) => ({
     id: r.id, code: r.code, level: r.level, maxUses: r.max_uses,
     used: r.used, expiry: r.expiry || undefined, active: r.active,
@@ -134,7 +134,7 @@ export async function fetchClassCodes(): Promise<ClassCode[]> {
 }
 
 export async function insertClassCode(c: ClassCode): Promise<void> {
-  await supabase.from('langrushi_class_codes').insert({
+  await supabase.from('app_class_codes').insert({
     id: c.id, code: c.code, level: c.level, max_uses: c.maxUses,
     used: c.used, expiry: c.expiry || null, active: c.active,
   });
@@ -145,16 +145,16 @@ export async function updateClassCode(id: string, patch: Partial<ClassCode>): Pr
   if ('used' in patch) dbPatch.used = patch.used;
   if ('active' in patch) dbPatch.active = patch.active;
   if ('maxUses' in patch) dbPatch.max_uses = patch.maxUses;
-  await supabase.from('langrushi_class_codes').update(dbPatch).eq('id', id);
+  await supabase.from('app_class_codes').update(dbPatch).eq('id', id);
 }
 
 export async function deleteClassCode(id: string): Promise<void> {
-  await supabase.from('langrushi_class_codes').delete().eq('id', id);
+  await supabase.from('app_class_codes').delete().eq('id', id);
 }
 
 // === Coupons ===
 export async function fetchCoupons(): Promise<Coupon[]> {
-  const { data } = await supabase.from('langrushi_coupons').select('*').order('code');
+  const { data } = await supabase.from('app_coupons').select('*').order('code');
   return (data || []).map((r: any) => ({
     id: r.id, code: r.code, discountType: r.discount_type, value: r.value,
     maxUses: r.max_uses || undefined, used: r.used,
@@ -163,7 +163,7 @@ export async function fetchCoupons(): Promise<Coupon[]> {
 }
 
 export async function insertCoupon(c: Coupon): Promise<void> {
-  await supabase.from('langrushi_coupons').insert({
+  await supabase.from('app_coupons').insert({
     id: c.id, code: c.code, discount_type: c.discountType, value: c.value,
     max_uses: c.maxUses || null, used: c.used, expiry: c.expiry || null, active: c.active,
   });
@@ -173,11 +173,11 @@ export async function updateCoupon(id: string, patch: Partial<Coupon>): Promise<
   const dbPatch: any = {};
   if ('used' in patch) dbPatch.used = patch.used;
   if ('active' in patch) dbPatch.active = patch.active;
-  await supabase.from('langrushi_coupons').update(dbPatch).eq('id', id);
+  await supabase.from('app_coupons').update(dbPatch).eq('id', id);
 }
 
 export async function deleteCoupon(id: string): Promise<void> {
-  await supabase.from('langrushi_coupons').delete().eq('id', id);
+  await supabase.from('app_coupons').delete().eq('id', id);
 }
 
 // === Settings ===
@@ -191,7 +191,7 @@ export async function fetchSettings(): Promise<{
   priceCourseB1: number;
   priceCourseB2: number;
 }> {
-  const { data } = await supabase.from('langrushi_settings').select('*');
+  const { data } = await supabase.from('app_settings').select('*');
   const map: any = {};
   (data || []).forEach((r: any) => { map[r.key] = r.value; });
   return {
@@ -208,14 +208,14 @@ export async function fetchSettings(): Promise<{
 
 export async function updateSetting(key: string, value: string): Promise<void> {
   const { error } = await supabase
-    .from('langrushi_settings')
+    .from('app_settings')
     .upsert({ key, value }, { onConflict: 'key' });
   if (error) console.error('[db] updateSetting failed:', key, error);
 }
 
 export async function insertAnalytics(visitorId: string, email: string | null, actionType: string, details: string): Promise<void> {
   const id = 'l_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
-  await supabase.from('langrushi_analytics').insert({
+  await supabase.from('app_analytics').insert({
     id,
     visitor_id: visitorId,
     user_email: email || null,
@@ -225,7 +225,7 @@ export async function insertAnalytics(visitorId: string, email: string | null, a
 }
 
 export async function fetchAnalytics(): Promise<any[]> {
-  const { data, error } = await supabase.from('langrushi_analytics').select('*').order('created_at', { ascending: false });
+  const { data, error } = await supabase.from('app_analytics').select('*').order('created_at', { ascending: false });
   if (error) { console.error(error); return []; }
   return (data || []).map((r: any) => ({
     id: r.id,

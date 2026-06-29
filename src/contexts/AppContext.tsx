@@ -118,7 +118,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [priceCourseB2, setPriceCourseB2State] = useState(349);
   const [authModal, setAuthModal] = useState<'login' | 'register' | 'forgot' | 'reset-password' | null>(null);
   const [forcedModal, setForcedModal] = useState(false);
-  const [activeExerciseId, setActiveExerciseId] = useState<string | null>(null);
+  const [activeExerciseId, setActiveExerciseIdState] = useState<string | null>(() => {
+    return localStorage.getItem('langrushi_active_exercise_id') || null;
+  });
+  const setActiveExerciseId = (id: string | null) => {
+    setActiveExerciseIdState(id);
+    if (id) {
+      localStorage.setItem('langrushi_active_exercise_id', id);
+    } else {
+      localStorage.removeItem('langrushi_active_exercise_id');
+    }
+  };
   const [cookieConsent, setCookieConsentState] = useState<'accepted' | 'rejected' | null>(null);
 
 

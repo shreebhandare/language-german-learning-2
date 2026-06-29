@@ -27,8 +27,8 @@ console.log("Supabase Key prefix:", supabaseKey ? supabaseKey.substring(0, 20) :
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function runTest() {
-  console.log("\nTesting connection to langrushi_exercises...");
-  const { data: exercises, error: errExercises } = await supabase.from('langrushi_exercises').select('*').limit(3);
+  console.log("\nTesting connection to app_exercises...");
+  const { data: exercises, error: errExercises } = await supabase.from('app_exercises').select('*').limit(3);
   if (errExercises) {
     console.error("Error fetching exercises:", errExercises);
   } else {
@@ -36,8 +36,8 @@ async function runTest() {
     console.log("Sample:", exercises);
   }
 
-  console.log("\nTesting connection to langrushi_settings...");
-  const { data: settings, error: errSettings } = await supabase.from('langrushi_settings').select('*');
+  console.log("\nTesting connection to app_settings...");
+  const { data: settings, error: errSettings } = await supabase.from('app_settings').select('*');
   if (errSettings) {
     console.error("Error fetching settings:", errSettings);
   } else {
