@@ -59,6 +59,9 @@ const emptyForm = (): FormState => ({
 /* ── Skeleton row ────────────────────────────── */
 const SkeletonRow = () => (
   <tr>
+    <td style={{ padding: '13px 14px 13px 16px', borderBottom: '1px solid var(--border)', width: '40px' }}>
+      <div className="skeleton" style={{ height: '16px', width: '16px', borderRadius: '4px' }} />
+    </td>
     {[280, 50, 90, 70, 50, 90, 80].map((w, i) => (
       <td key={i} style={{ padding: '13px 14px', borderBottom: '1px solid var(--border)' }}>
         <div className="skeleton" style={{ height: '14px', width: `${w}px`, maxWidth: '100%' }} />
@@ -69,10 +72,11 @@ const SkeletonRow = () => (
 
 /* ────────────────────────────────────────────── */
 const ExercisesAdmin: React.FC = () => {
-  const { exercises, addExercise, updateExercise, removeExercise } = useAppContext();
+  const { exercises, addExercise, updateExercise, removeExercise, removeExercises } = useAppContext();
   const [mode, setMode] = useState<'list' | 'add' | 'edit'>('list');
   const [editId, setEditId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [form, setForm] = useState<FormState>(emptyForm());
   const [filter, setFilter] = useState({ level: '', category: '', search: '' });
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
@@ -94,8 +98,9 @@ const ExercisesAdmin: React.FC = () => {
     }
   };
 
-  const startAdd = () => { setForm(emptyForm()); setEditId(null); setMode('add'); };
+  const startAdd = () => { setSelectedIds([]); setForm(emptyForm()); setEditId(null); setMode('add'); };
   const startEdit = (ex: Exercise) => {
+    setSelectedIds([]);
     setForm({
       title: ex.title, level: ex.level, category: ex.category, subPart: ex.subPart,
       type: ex.type, access: ex.access, mediaUrl: ex.mediaUrl || '',
@@ -106,7 +111,7 @@ const ExercisesAdmin: React.FC = () => {
     });
     setEditId(ex.id); setMode('edit');
   };
-  const cancel = () => { setMode('list'); setEditId(null); setForm(emptyForm()); setActiveQuestionId(null); };
+  const cancel = () => { setMode('list'); setEditId(null); setForm(emptyForm()); setActiveQuestionId(null); setSelectedIds([]); };
 
   const handleSave = async () => {
     if (!form.title) { toast({ title: 'Title is required' }); return; }
@@ -131,7 +136,21 @@ const ExercisesAdmin: React.FC = () => {
   const deleteEx = async (id: string) => {
     if (!confirm('Delete this exercise?')) return;
     await removeExercise(id);
+    setSelectedIds(prev => prev.filter(item => item !== id));
     toast({ title: 'Deleted' });
+  };
+
+  const handleBulkDelete = async () => {
+    if (!confirm(`Are you sure you want to delete the ${selectedIds.length} selected exercises? This action cannot be undone.`)) return;
+    setBusy(true);
+    try {
+      await removeExercises(selectedIds);
+      toast({ title: `${selectedIds.length} exercises deleted` });
+      setSelectedIds([]);
+    } catch (e: any) {
+      toast({ title: 'Failed to delete exercises', description: e?.message });
+    }
+    setBusy(false);
   };
 
   const addQ = () => setForm({ ...form, questions: [...form.questions, { id: 'q' + Date.now(), text: '', type: 'MCQ', options: ['', '', '', ''], correctAnswer: '', hint: '', explanation: '' }] });
@@ -176,6 +195,29 @@ const ExercisesAdmin: React.FC = () => {
   }, [sortedExercises, currentPage, pageSize]);
 
   const totalPages = Math.ceil(sortedExercises.length / pageSize) || 1;
+
+  const pageIds = useMemo(() => paginatedExercises.map(e => e.id), [paginatedExercises]);
+  const allPageSelected = useMemo(() => pageIds.length > 0 && pageIds.every(id => selectedIds.includes(id)), [pageIds, selectedIds]);
+
+  const toggleSelectAll = () => {
+    if (allPageSelected) {
+      setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
+    } else {
+      setSelectedIds(prev => {
+        const next = [...prev];
+        pageIds.forEach(id => {
+          if (!next.includes(id)) next.push(id);
+        });
+        return next;
+      });
+    }
+  };
+
+  const toggleSelectRow = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
 
   /* ── Form view ─────────────────────────────── */
 
@@ -380,6 +422,40 @@ const ExercisesAdmin: React.FC = () => {
         </button>
       </div>
 
+      {/* Bulk Action Banner */}
+      {selectedIds.length > 0 && (
+        <div className="card p-4 mb-5" style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: 'rgba(239, 68, 68, 0.08)',
+          border: '1px solid rgba(239, 68, 68, 0.2)',
+          borderRadius: '12px',
+          animation: 'slideDown 0.2s ease-out'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontWeight: 600, fontSize: '14px' }}>
+            <Trash2 className="w-4 h-4" style={{ color: 'var(--danger)' }} />
+            <span>{selectedIds.length} {selectedIds.length === 1 ? 'exercise' : 'exercises'} selected</span>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => setSelectedIds([])}
+              className="btn-ghost"
+              style={{ fontSize: '13px', padding: '6px 12px' }}
+            >
+              Cancel Selection
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              className="btn-danger"
+              style={{ fontSize: '13px', padding: '6px 12px', background: 'var(--danger)', color: '#fff', display: 'flex', alignItems: 'center', gap: '6px', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+            >
+              Delete Selected
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="card p-4 mb-5" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
         <div style={{ flex: '1 1 180px', position: 'relative' }}>
@@ -411,6 +487,25 @@ const ExercisesAdmin: React.FC = () => {
           <table className="data-table">
             <thead>
               <tr>
+                <th style={{ width: '40px', paddingLeft: '16px' }}>
+                  <input
+                    type="checkbox"
+                    checked={allPageSelected}
+                    ref={el => {
+                      if (el) {
+                        const visibleSelectedCount = pageIds.filter(id => selectedIds.includes(id)).length;
+                        el.indeterminate = visibleSelectedCount > 0 && visibleSelectedCount < pageIds.length;
+                      }
+                    }}
+                    onChange={toggleSelectAll}
+                    style={{
+                      width: '16px',
+                      height: '16px',
+                      accentColor: 'var(--accent)',
+                      cursor: 'pointer'
+                    }}
+                  />
+                </th>
                 <th style={{ width: '32%', cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('title')}>Title {sortKey === 'title' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
                 <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('level')}>Level {sortKey === 'level' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
                 <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('category')}>Category {sortKey === 'category' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
@@ -427,7 +522,7 @@ const ExercisesAdmin: React.FC = () => {
                 Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8}>
+                  <td colSpan={9}>
                     <div className="empty-state">
                       <div className="empty-state-icon"><Search className="w-5 h-5" style={{ color: 'var(--text-muted)' }} /></div>
                       <p style={{ fontFamily: 'Figtree, sans-serif', fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)', margin: '0 0 4px' }}>No exercises found</p>
@@ -436,7 +531,20 @@ const ExercisesAdmin: React.FC = () => {
                   </td>
                 </tr>
               ) : paginatedExercises.map(e => (
-                <tr key={e.id}>
+                <tr key={e.id} style={{ background: selectedIds.includes(e.id) ? 'rgba(53, 99, 233, 0.02)' : undefined }}>
+                  <td style={{ width: '40px', paddingLeft: '16px' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(e.id)}
+                      onChange={() => toggleSelectRow(e.id)}
+                      style={{
+                        width: '16px',
+                        height: '16px',
+                        accentColor: 'var(--accent)',
+                        cursor: 'pointer'
+                      }}
+                    />
+                  </td>
                   <td style={{ color: 'var(--text-primary)', fontWeight: 600, maxWidth: '280px' }}>
                     <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.title}</div>
                   </td>

@@ -25,6 +25,10 @@ const LearnPage: React.FC = () => {
     });
   }, [exercises, selectedLevel, selectedCategory, search]);
 
+  // Only show levels and categories that actually exist in the database
+  const availableLevels = useMemo(() => LEVELS.filter(l => exercises.some(e => e.level === l)), [exercises]);
+  const availableCategories = useMemo(() => CATEGORIES.filter(c => exercises.some(e => e.category === c)), [exercises]);
+
   const activeExercise = exercises.find(e => e.id === activeExerciseId);
 
   const handleStart = (ex: Exercise) => {
@@ -75,7 +79,7 @@ const LearnPage: React.FC = () => {
             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Filter by Level</div>
             <div className="flex flex-wrap gap-2">
               <FilterChip active={selectedLevel === 'all'} onClick={() => setSelectedLevel('all')}>All</FilterChip>
-              {LEVELS.map(l => (
+              {availableLevels.map(l => (
                 <FilterChip key={l} active={selectedLevel === l} onClick={() => setSelectedLevel(l)}>{l}</FilterChip>
               ))}
             </div>
@@ -85,7 +89,7 @@ const LearnPage: React.FC = () => {
             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Filter by Category</div>
             <div className="flex flex-wrap gap-2">
               <FilterChip active={selectedCategory === 'all'} onClick={() => setSelectedCategory('all')}>All</FilterChip>
-              {CATEGORIES.map(c => {
+              {availableCategories.map(c => {
                 const Icon = categoryIcons[c];
                 return (
                   <FilterChip key={c} active={selectedCategory === c} onClick={() => setSelectedCategory(c)}>
@@ -119,7 +123,7 @@ const LearnPage: React.FC = () => {
               const isFree = ex.category === 'Grammar' || ex.category === 'Games' || ex.access === 'FREE_ALL';
 
               return (
-                <div key={ex.id} className={`relative bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl transition-all duration-300 group flex flex-col ${locked ? '' : 'cursor-pointer hover:-translate-y-1'}`} onClick={() => handleStart(ex)}>
+                <div key={ex.id} className={`relative bg-white rounded-2xl border border-slate-200 overflow-hidden transition-shadow duration-300 group flex flex-col ${locked ? '' : 'cursor-pointer hover:shadow-2xl hover:border-slate-300'}`} onClick={() => handleStart(ex)}>
                   {locked && (
                     <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] z-10 flex items-center justify-center p-6">
                       <div className="text-center bg-white p-6 rounded-2xl border border-slate-100 shadow-xl scale-95 animate-in fade-in zoom-in duration-300">
@@ -136,7 +140,7 @@ const LearnPage: React.FC = () => {
                       </div>
                     </div>
                   )}
-                  <div className={`h-24 relative overflow-hidden transition-all group-hover:h-28 ${
+                  <div className={`h-24 relative overflow-hidden ${
                     ex.level === 'A1' ? 'bg-gradient-to-br from-[#10B981] to-[#059669]' :
                     ex.level === 'A2' ? 'bg-gradient-to-br from-[#3B82F6] to-[#1D4ED8]' :
                     ex.level === 'B1' ? 'bg-gradient-to-br from-[#8B5CF6] to-[#6D28D9]' :

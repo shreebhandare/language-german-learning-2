@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 export type Tier = 'guest' | 'registered' | 'paid' | 'course' | 'admin';
-export type View = 'learn' | 'dashboard' | 'admin';
+export type View = 'learn' | 'dashboard' | 'admin' | 'pricing';
 
 export interface User {
   id: string;
@@ -38,6 +38,7 @@ interface AppContextType {
   addExercise: (ex: Exercise) => Promise<void>;
   updateExercise: (id: string, ex: Partial<Exercise>) => Promise<void>;
   removeExercise: (id: string) => Promise<void>;
+  removeExercises: (ids: string[]) => Promise<void>;
   fetchAllAttempts: () => Promise<any[]>;
   classCodes: ClassCode[];
   addClassCode: (c: ClassCode) => Promise<void>;
@@ -89,20 +90,28 @@ export const useAppContext = () => {
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
+
   const location = useLocation();
   const navigate = useNavigate();
-  
-  const pathname = location.pathname.replace('/', '') || 'learn';
-  const validViews = ['learn', 'dashboard', 'admin'];
-  const view = validViews.includes(pathname) ? pathname as View : 'learn';
+
+  const [user, setUser] = useState<User | null>(null);
+
+  const getInitialView = (): View => {
+    const pathSegment = location.pathname.split('/')[1];
+    if (!pathSegment || pathSegment === 'learn' || pathSegment === 'exercises') {
+      return 'learn';
+    }
+    const validViews: View[] = ['learn', 'dashboard', 'admin', 'pricing'];
+    return validViews.includes(pathSegment as View) ? pathSegment as View : 'learn';
+  };
+
+  const view = getInitialView();
 
   const setView = (v: View) => {
     if (v === 'learn') navigate('/');
     else navigate(`/${v}`);
   };
 
-  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [classCodes, setClassCodes] = useState<ClassCode[]>([]);
@@ -118,15 +127,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [priceCourseB2, setPriceCourseB2State] = useState(349);
   const [authModal, setAuthModal] = useState<'login' | 'register' | 'forgot' | 'reset-password' | null>(null);
   const [forcedModal, setForcedModal] = useState(false);
-  const [activeExerciseId, setActiveExerciseIdState] = useState<string | null>(() => {
-    return localStorage.getItem('langrushi_active_exercise_id') || null;
-  });
+  const activeExerciseId = location.pathname.startsWith('/exercises/')
+    ? location.pathname.split('/')[2] || null
+    : null;
+
   const setActiveExerciseId = (id: string | null) => {
-    setActiveExerciseIdState(id);
     if (id) {
       localStorage.setItem('langrushi_active_exercise_id', id);
+      navigate(`/exercises/${id}`);
     } else {
       localStorage.removeItem('langrushi_active_exercise_id');
+      navigate('/learn');
     }
   };
   const [cookieConsent, setCookieConsentState] = useState<'accepted' | 'rejected' | null>(null);
@@ -312,7 +323,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     fetch('https://famous.ai/api/crm/69f7abee58024ee320e024b5/subscribe', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, name, source: 'register', tags: ['langrushi', 'registered'] }),
-    }).catch(() => {});
+    }).catch(() => { });
 
     // If confirmation is required, session won't be active immediately
     toast({ title: 'Registration successful', description: 'Please check your email to confirm your account.' });
@@ -514,6 +525,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await db.deleteExercise(id);
     setExercises(prev => prev.filter(e => e.id !== id));
   };
+  const removeExercises = async (ids: string[]) => {
+    await db.deleteExercises(ids);
+    setExercises(prev => prev.filter(e => !ids.includes(e.id)));
+  };
   const fetchAllAttempts = async () => {
     return await db.fetchAllAttempts();
   };
@@ -583,13 +598,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const logActivity = async (action: string, details: string) => {
     const consent = localStorage.getItem('langrushi_cookie_consent');
     if (consent !== 'accepted') return; // GDPR compliance: only log if accepted
-    
+
     let vid = localStorage.getItem('langrushi_visitor_id');
     if (!vid) {
       vid = 'vid_' + Date.now() + Math.random().toString(36).substring(2, 11);
       localStorage.setItem('langrushi_visitor_id', vid);
     }
-    
+
     try {
       await db.insertAnalytics(vid, user?.email || null, action, details);
     } catch (e) {
@@ -600,7 +615,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // GDPR Activity logging page views - defined after logActivity to avoid reference issues
   useEffect(() => {
     logActivity('page_view', location.pathname);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname, user?.email, cookieConsent]);
 
   return (
@@ -608,7 +623,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       sidebarOpen, toggleSidebar, view, setView,
       user, loading, login, register, logout, loginGoogle,
       forgotPassword, resetPassword, upgradeToPaid, applyClassCode,
-      exercises, refreshExercises, addExercise, updateExercise: updateExerciseCtx, removeExercise, fetchAllAttempts,
+      exercises, refreshExercises, addExercise, updateExercise: updateExerciseCtx, removeExercise, removeExercises, fetchAllAttempts,
       classCodes, addClassCode, updateClassCodeLocal, removeClassCode,
       coupons, addCoupon, updateCouponLocal, removeCoupon,
       users, refreshUsers, changeUserTier,

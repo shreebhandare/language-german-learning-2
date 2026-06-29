@@ -7,6 +7,8 @@ import AdminPanel from './langrushi/admin';
 import AuthModal from './langrushi/AuthModal';
 import ForcedUpgradeModal from './langrushi/ForcedUpgradeModal';
 import CookieBanner from './langrushi/CookieBanner';
+import { PricingPage } from './langrushi/SimplePages';
+import Footer from './langrushi/Footer';
 
 const AppLayout: React.FC = () => {
   const { view, loading, activeExerciseId } = useAppContext();
@@ -27,6 +29,7 @@ const AppLayout: React.FC = () => {
       case 'learn':     return <LearnPage />;
       case 'dashboard': return <Dashboard />;
       case 'admin':     return <AdminPanel />;
+      case 'pricing':   return <PricingPage />;
       default:          return <LearnPage />;
     }
   };
@@ -55,6 +58,7 @@ const AppLayout: React.FC = () => {
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg-base)' }}>
       {showHeader && <Header />}
       <main className="flex-1">{renderView()}</main>
+      {showHeader && <Footer />}
       <AuthModal />
       <ForcedUpgradeModal />
       <CookieBanner />

@@ -3,12 +3,20 @@ import { useAppContext } from '@/contexts/AppContext';
 import { Exercise, Question } from '@/lib/langrushi-data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, ArrowRight, CheckCircle2, XCircle, HelpCircle, Lightbulb, Headphones, RotateCcw, Award, X, Check, FileText, Clock } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2, XCircle, HelpCircle, Lightbulb, Headphones, RotateCcw, Award, X, Check, FileText, Clock, Share2 } from 'lucide-react';
 
 interface Props { exercise: Exercise; onClose: () => void; }
 
 const QuizPlayer: React.FC<Props> = ({ exercise, onClose }) => {
   const { recordAttempt, user, exercises, answerDisplayMode: globalAnswerDisplayMode } = useAppContext();
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = () => {
+    const url = `${window.location.origin}/exercises/${exercise.id}`;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
   
   const allowSkip = exercise.allowSkip !== false;
   // Use per-exercise setting if set, otherwise fall back to the global site-wide default
@@ -535,9 +543,33 @@ const QuizPlayer: React.FC<Props> = ({ exercise, onClose }) => {
           />
         </div>
         <div className="flex items-center justify-between px-6 h-14">
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 flex items-center gap-1.5 text-sm font-medium transition-colors">
-            <X className="w-4 h-4" /> Quit
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 flex items-center gap-1.5 text-sm font-medium transition-colors">
+              <X className="w-4 h-4" /> Quit
+            </button>
+            <div 
+              onClick={handleCopyLink}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '4px 8px',
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border)',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontFamily: 'monospace',
+                fontSize: '11px',
+                color: 'var(--text-secondary)'
+              }}
+              className="hover:opacity-90 transition-opacity"
+              title="Click to copy quiz link"
+            >
+              <Share2 className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
+              <span className="hidden sm:inline">{copied ? 'Copied Link!' : `${window.location.host}/exercises/${exercise.id}`}</span>
+              <span className="sm:hidden">{copied ? 'Copied!' : 'Share'}</span>
+            </div>
+          </div>
           <span className="text-sm font-bold text-slate-500">Question {queueIdx + 1} of {queue.length}</span>
           <button onClick={() => setShowFinishModal(true)} className="text-blue-500 hover:text-blue-700 text-sm font-bold transition-colors">
             Finish Early
@@ -665,6 +697,15 @@ const QuizPlayer: React.FC<Props> = ({ exercise, onClose }) => {
 
 const PassiveExercise: React.FC<{ exercise: Exercise; onClose: () => void; isCourseMatch: boolean }> = ({ exercise, onClose, isCourseMatch }) => {
   const { recordAttempt, exercises, setActiveExerciseId } = useAppContext();
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = () => {
+    const url = `${window.location.origin}/exercises/${exercise.id}`;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   useEffect(() => { recordAttempt(exercise.id, 1, 1); }, [recordAttempt, exercise.id]);
 
   const sameCategoryEx = exercises.filter(e => e.category === exercise.category && e.level === exercise.level);
@@ -675,10 +716,33 @@ const PassiveExercise: React.FC<{ exercise: Exercise; onClose: () => void; isCou
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col p-4 md:p-8">
       <div className="max-w-3xl mx-auto w-full">
-        <div className="mb-6">
+        <div className="mb-6 flex justify-between items-center">
           <Button variant="ghost" onClick={onClose} className="text-slate-500 hover:text-slate-800">
             <ArrowLeft className="w-4 h-4 mr-2" /> Back
           </Button>
+          <div 
+            onClick={handleCopyLink}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              background: 'white',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontFamily: 'monospace',
+              fontSize: '12px',
+              color: 'var(--text-secondary)',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+            }}
+            className="hover:bg-slate-50 transition-colors"
+            title="Click to copy quiz link"
+          >
+            <Share2 className="w-4 h-4" style={{ color: 'var(--accent)' }} />
+            <span className="hidden sm:inline">{copied ? 'Copied Link!' : `${window.location.host}/exercises/${exercise.id}`}</span>
+            <span className="sm:hidden">{copied ? 'Copied!' : 'Share'}</span>
+          </div>
         </div>
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
           <div className="flex items-center gap-2 mb-4 flex-wrap">

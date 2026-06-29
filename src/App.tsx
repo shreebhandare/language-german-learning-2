@@ -25,6 +25,8 @@ const App = () => (
               <Route path="/learn" element={<Index />} />
               <Route path="/dashboard" element={<Index />} />
               <Route path="/admin" element={<Index />} />
+              <Route path="/pricing" element={<Index />} />
+              <Route path="/exercises/:id" element={<Index />} />
               <Route path="/auth/callback" element={<AuthCallbackPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

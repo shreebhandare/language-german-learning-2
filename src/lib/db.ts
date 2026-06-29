@@ -71,6 +71,11 @@ export async function deleteExercise(id: string): Promise<void> {
   await supabase.from('app_exercises').delete().eq('id', id);
 }
 
+export async function deleteExercises(ids: string[]): Promise<void> {
+  const { error } = await supabase.from('app_exercises').delete().in('id', ids);
+  if (error) console.error('[db] deleteExercises failed:', error);
+}
+
 // === Profiles ===
 export async function fetchAllProfiles(): Promise<any[]> {
   const { data } = await supabase.from('shared_profiles').select('*').order('registered_at', { ascending: false });
